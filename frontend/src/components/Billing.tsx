@@ -48,19 +48,23 @@ const Billing: React.FC = () => {
   }, [currentBill.items, currentBill.tax_percentage, currentBill.discount_percentage]);
 
   const loadData = async () => {
-    const db = Database.getInstance();
-    const productData = await db.query('products') as Product[];
-    const customerData = await db.query('customers') as Customer[];
-    const billData = await db.query('bills') as Bill[];
-    const invoiceData = await db.query('invoices') as Invoice[];
-    
-    setProducts(productData.filter(p => p.status === 'active'));
-    setCustomers(customerData);
-    // setRecentBills(billData.slice(-10).reverse());
-    // setRecentInvoices(invoiceData.slice(-10).reverse());
-    setRecentInvoices(billData);
-    setRecentInvoices(invoiceData);
-
+    try {
+      const db = Database.getInstance();
+      const [productData, customerData, billData, invoiceData] = await Promise.all([
+        db.getProducts(),
+        db.getCustomers(),
+        db.getBills(),
+        db.getInvoices()
+      ]);
+      
+      setProducts(productData.filter((p: Product) => p.status === 'active'));
+      setCustomers(customerData);
+      setRecentBills(billData.slice(-10).reverse());
+      setRecentInvoices(invoiceData.slice(-10).reverse());
+    } catch (error) {
+      console.error('Error loading data:', error);
+      alert('Failed to load data. Please try again.');
+    }
   };
 
   const calculateTotals = () => {
@@ -117,6 +121,21 @@ const Billing: React.FC = () => {
     const updatedItems = (currentBill.items || []).map(item => {
       if (item.id === itemId) {
         const updatedItem = { ...item, ...updates };
+        
+        // Validate numeric inputs
+        if (updates.weight !== undefined && (isNaN(updates.weight) || updates.weight <= 0)) {
+          return item;
+        }
+        if (updates.rate !== undefined && (isNaN(updates.rate) || updates.rate <= 0)) {
+          return item;
+        }
+        if (updates.quantity !== undefined && (isNaN(updates.quantity) || updates.quantity <= 0)) {
+          return item;
+        }
+        if (updates.making_charge !== undefined && (isNaN(updates.making_charge) || updates.making_charge < 0)) {
+          return item;
+        }
+        
         updatedItem.total = (updatedItem.weight * updatedItem.rate + updatedItem.making_charge) * updatedItem.quantity;
         return updatedItem;
       }
@@ -144,63 +163,54 @@ const Billing: React.FC = () => {
       return;
     }
 
-    const db = Database.getInstance();
-    const billNumber = `BILL-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    
-    const billData = {
-      invoice_number: billNumber,
-      customer_id: selectedCustomer?.id,
-      customer_name: selectedCustomer?.name || currentBill.customer_name,
-      customer_phone: selectedCustomer?.phone || currentBill.customer_phone,
-      subtotal: currentBill.subtotal,
-      tax_percentage: currentBill.tax_percentage,
-      tax_amount: currentBill.tax_amount,
-      discount_percentage: currentBill.discount_percentage,
-      discount_amount: currentBill.discount_amount,
-      total_amount: currentBill.total_amount,
-      payment_method: currentBill.payment_method,
-      payment_status: currentBill.payment_status,
-      amount_paid: currentBill.amount_paid,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const savedBill = await db.insert('bills', billData);
-    
-    // Save bill items
-    for (const item of currentBill.items || []) {
-      await db.insert('bill_items', {
-        bill_id: savedBill.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        weight: item.weight,
-        rate: item.rate,
-        making_charge: item.making_charge,
-        quantity: item.quantity,
-        total: item.total,
+    try {
+      const db = Database.getInstance();
+      const billNumber = `BILL-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+      
+      const billData = {
+        invoice_number: billNumber, // API expects invoice_number but stores as bill_number
+        customer_id: selectedCustomer?.id,
+        customer_name: selectedCustomer?.name || currentBill.customer_name,
+        customer_phone: selectedCustomer?.phone || currentBill.customer_phone,
+        items: currentBill.items,
+        subtotal: currentBill.subtotal,
+        tax_percentage: currentBill.tax_percentage,
+        tax_amount: currentBill.tax_amount,
+        discount_percentage: currentBill.discount_percentage,
+        discount_amount: currentBill.discount_amount,
+        total_amount: currentBill.total_amount,
+        payment_method: currentBill.payment_method,
+        payment_status: currentBill.payment_status,
+        amount_paid: currentBill.amount_paid,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      await db.createBill(billData);
+      
+      // Reset the form
+      setCurrentBill({
+        items: [],
+        subtotal: 0,
+        tax_percentage: 3,
+        tax_amount: 0,
+        discount_percentage: 0,
+        discount_amount: 0,
+        total_amount: 0,
+        payment_method: 'cash',
+        payment_status: 'pending',
+        amount_paid: 0,
       });
+      setSelectedCustomer(null);
+      
+      // Reload recent bills
+      await loadData();
+      
+      alert('Bill saved successfully!');
+    } catch (error) {
+      console.error('Error saving bill:', error);
+      alert('Failed to save bill. Please try again.');
     }
-    
-    // Reset the form
-    setCurrentBill({
-      items: [],
-      subtotal: 0,
-      tax_percentage: 3,
-      tax_amount: 0,
-      discount_percentage: 0,
-      discount_amount: 0,
-      total_amount: 0,
-      payment_method: 'cash',
-      payment_status: 'pending',
-      amount_paid: 0,
-    });
-    setSelectedCustomer(null);
-    
-    // Reload recent bills
-    loadData();
-    
-    alert('Bill saved successfully!');
   };
 
   const saveInvoice = async () => {
@@ -223,73 +233,64 @@ const Billing: React.FC = () => {
       }
     }
 
-    const db = Database.getInstance();
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    
-    const invoiceData = {
-      invoice_number: invoiceNumber,
-      customer_id: selectedCustomer?.id,
-      customer_name: selectedCustomer?.name || currentBill.customer_name,
-      customer_phone: selectedCustomer?.phone || currentBill.customer_phone,
-      subtotal: currentBill.subtotal,
-      tax_percentage: currentBill.tax_percentage,
-      tax_amount: currentBill.tax_amount,
-      discount_percentage: currentBill.discount_percentage,
-      discount_amount: currentBill.discount_amount,
-      total_amount: currentBill.total_amount,
-      payment_method: currentBill.payment_method,
-      payment_status: currentBill.payment_status,
-      amount_paid: currentBill.amount_paid,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const savedInvoice = await db.insert('invoices', invoiceData);
-    
-    // Save invoice items
-    for (const item of currentBill.items || []) {
-      await db.insert('invoice_items', {
-        invoice_id: savedInvoice.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        weight: item.weight,
-        rate: item.rate,
-        making_charge: item.making_charge,
-        quantity: item.quantity,
-        total: item.total,
+    try {
+      const db = Database.getInstance();
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+      
+      const invoiceData = {
+        invoice_number: invoiceNumber,
+        customer_id: selectedCustomer?.id,
+        customer_name: selectedCustomer?.name || currentBill.customer_name,
+        customer_phone: selectedCustomer?.phone || currentBill.customer_phone,
+        items: currentBill.items,
+        subtotal: currentBill.subtotal,
+        tax_percentage: currentBill.tax_percentage,
+        tax_amount: currentBill.tax_amount,
+        discount_percentage: currentBill.discount_percentage,
+        discount_amount: currentBill.discount_amount,
+        total_amount: currentBill.total_amount,
+        payment_method: currentBill.payment_method,
+        payment_status: currentBill.payment_status,
+        amount_paid: currentBill.amount_paid,
         created_at: new Date().toISOString(),
-      });
-    }
-    
-    // Deduct inventory for each item
-    for (const item of currentBill.items || []) {
-      const product = products.find(p => p.id === item.product_id);
-      if (product) {
-        await db.update('products', item.product_id, {
-          stock_quantity: product.stock_quantity - item.quantity
-        });
+        updated_at: new Date().toISOString(),
+      };
+
+      await db.createInvoice(invoiceData);
+      
+      // Deduct inventory for each item
+      for (const item of currentBill.items || []) {
+        const product = products.find(p => p.id === item.product_id);
+        if (product) {
+          await db.updateProduct(item.product_id, {
+            stock_quantity: product.stock_quantity - item.quantity
+          });
+        }
       }
+      
+      // Reset the form
+      setCurrentBill({
+        items: [],
+        subtotal: 0,
+        tax_percentage: 3,
+        tax_amount: 0,
+        discount_percentage: 0,
+        discount_amount: 0,
+        total_amount: 0,
+        payment_method: 'cash',
+        payment_status: 'pending',
+        amount_paid: 0,
+      });
+      setSelectedCustomer(null);
+      
+      // Reload data
+      await loadData();
+      
+      alert('Invoice saved successfully and inventory updated!');
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      alert('Failed to save invoice. Please try again.');
     }
-    
-    // Reset the form
-    setCurrentBill({
-      items: [],
-      subtotal: 0,
-      tax_percentage: 3,
-      tax_amount: 0,
-      discount_percentage: 0,
-      discount_amount: 0,
-      total_amount: 0,
-      payment_method: 'cash',
-      payment_status: 'pending',
-      amount_paid: 0,
-    });
-    setSelectedCustomer(null);
-    
-    // Reload data
-    loadData();
-    
-    alert('Invoice saved successfully and inventory updated!');
   };
 
   const CustomerModal: React.FC<{
@@ -309,11 +310,16 @@ const Billing: React.FC = () => {
         return;
       }
 
-      const db = Database.getInstance();
-      const customerData = await db.insert('customers', newCustomer);
-      setCustomers([...customers, customerData]);
-      onSelect(customerData);
-      onClose();
+      try {
+        const db = Database.getInstance();
+        const customerData = await db.createCustomer(newCustomer);
+        setCustomers([...customers, customerData]);
+        onSelect(customerData);
+        onClose();
+      } catch (error) {
+        console.error('Error creating customer:', error);
+        alert('Failed to create customer. Please try again.');
+      }
     };
 
     return (
@@ -594,9 +600,15 @@ const Billing: React.FC = () => {
                       <td className="px-6 py-4">
                         <input
                           type="number"
+                          min="0.01"
                           step="0.01"
                           value={item.weight}
-                          onChange={(e) => updateBillItem(item.id, { weight: parseFloat(e.target.value) })}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            if (!isNaN(value) && value > 0) {
+                              updateBillItem(item.id, { weight: value });
+                            }
+                          }}
                           className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                         />
                         <span className="text-sm text-gray-600 ml-1">g</span>
@@ -604,16 +616,30 @@ const Billing: React.FC = () => {
                       <td className="px-6 py-4">
                         <input
                           type="number"
+                          min="1"
+                          step="1"
                           value={item.rate}
-                          onChange={(e) => updateBillItem(item.id, { rate: parseInt(e.target.value) })}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (!isNaN(value) && value > 0) {
+                              updateBillItem(item.id, { rate: value });
+                            }
+                          }}
                           className="w-24 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                         />
                       </td>
                       <td className="px-6 py-4">
                         <input
                           type="number"
+                          min="1"
+                          step="1"
                           value={item.quantity}
-                          onChange={(e) => updateBillItem(item.id, { quantity: parseInt(e.target.value) })}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (!isNaN(value) && value > 0) {
+                              updateBillItem(item.id, { quantity: value });
+                            }
+                          }}
                           className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                         />
                       </td>
@@ -664,8 +690,16 @@ const Billing: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
                     value={currentBill.discount_percentage || 0}
-                    onChange={(e) => setCurrentBill(prev => ({ ...prev, discount_percentage: parseFloat(e.target.value) }))}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value) && value >= 0 && value <= 100) {
+                        setCurrentBill(prev => ({ ...prev, discount_percentage: value }));
+                      }
+                    }}
                     className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                   />
                   <span className="text-sm">%</span>
@@ -682,8 +716,16 @@ const Billing: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
                     value={currentBill.tax_percentage || 3}
-                    onChange={(e) => setCurrentBill(prev => ({ ...prev, tax_percentage: parseFloat(e.target.value) }))}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value) && value >= 0 && value <= 100) {
+                        setCurrentBill(prev => ({ ...prev, tax_percentage: value }));
+                      }
+                    }}
                     className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                   />
                   <span className="text-sm">%</span>
@@ -725,8 +767,15 @@ const Billing: React.FC = () => {
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={currentBill.amount_paid || 0}
-                    onChange={(e) => setCurrentBill(prev => ({ ...prev, amount_paid: parseFloat(e.target.value) }))}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value) && value >= 0) {
+                        setCurrentBill(prev => ({ ...prev, amount_paid: value }));
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   />
                 </div>
@@ -760,7 +809,7 @@ const Billing: React.FC = () => {
                 recentBills.map((bill) => (
                   <div key={bill.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">{bill.invoice_number}</p>
+                      <p className="font-medium text-gray-900">{bill.bill_number}</p>
                       <p className="text-sm text-gray-600">{bill.customer_name}</p>
                     </div>
                     <div className="text-right">

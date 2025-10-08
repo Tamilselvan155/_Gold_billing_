@@ -120,7 +120,7 @@ router.post('/', (req, res) => {
     } = req.body;
     
     // Validate required fields
-    if (!customer_id || !items || !total_amount || !payment_method) {
+    if (!customer_name || !items || !total_amount || !payment_method) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
@@ -140,7 +140,7 @@ router.post('/', (req, res) => {
       `);
       
       const invoiceResult = invoiceStmt.run(
-        invoiceNumber, customer_id, customer_name, customer_phone, customer_address,
+        invoiceNumber, customer_id || null, customer_name, customer_phone, customer_address,
         subtotal, tax_percentage, tax_amount, discount_percentage, discount_amount,
         total_amount, payment_method, notes
       );

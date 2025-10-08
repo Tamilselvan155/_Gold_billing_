@@ -36,7 +36,7 @@ export interface Customer {
 
 export interface Bill {
   id: string;
-  invoice_number: string;
+  bill_number: string;
   customer_id?: string;
   customer_name: string;
   customer_phone?: string;

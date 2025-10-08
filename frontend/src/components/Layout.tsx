@@ -187,38 +187,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Right side - Actions and Header Toggle */}
             <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Search Button */}
-              <button 
+              {/* <button 
                 className="toggle-button p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 hidden sm:block focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
                 aria-label="Search"
               >
                 <Search className="h-5 w-5" />
-              </button>
+              </button> */}
 
               {/* Language Switcher */}
               <div className="hidden sm:block">
               <LanguageSwitcher />
               </div>
 
-              {/* Notifications */}
-              <button 
-                className="toggle-button relative p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 hover:shadow-glow"
-                aria-label="Notifications (2 unread)"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-xs text-white pulse-glow" aria-hidden="true">
-                  2
-                </span>
-              </button>
-
               {/* Dark Mode Toggle */}
-              <button
+              {/* <button
                 onClick={toggleDarkMode}
                 className="toggle-button p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
                 aria-pressed={darkMode}
               >
                 {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
+              </button> */}
 
               {/* Help Button */}
               <button

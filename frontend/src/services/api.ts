@@ -54,6 +54,14 @@ export const apiEndpoints = {
     delete: (id: string) => api.delete(`/customers/${id}`),
   },
   
+  // Bills
+  bills: {
+    getAll: () => api.get('/bills'),
+    getById: (id: string) => api.get(`/bills/${id}`),
+    create: (data: any) => api.post('/bills', data),
+    updatePayment: (id: string, data: any) => api.patch(`/bills/${id}/payment`, data),
+  },
+  
   // Invoices
   invoices: {
     getAll: () => api.get('/invoices'),

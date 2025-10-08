@@ -117,6 +117,47 @@ class Database {
     }
   }
 
+  // Bills
+  public async getBills(filters?: any) {
+    try {
+      const response = await apiEndpoints.bills.getAll();
+      return response.data.data || [];
+    } catch (error) {
+      console.error('Error fetching bills:', error);
+      return [];
+    }
+  }
+
+  public async getBill(id: string) {
+    try {
+      const response = await apiEndpoints.bills.getById(id);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching bill:', error);
+      return null;
+    }
+  }
+
+  public async createBill(data: any) {
+    try {
+      const response = await apiEndpoints.bills.create(data);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error creating bill:', error);
+      throw error;
+    }
+  }
+
+  public async updateBillPayment(id: string, data: any) {
+    try {
+      const response = await apiEndpoints.bills.updatePayment(id, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating bill payment:', error);
+      throw error;
+    }
+  }
+
   // Invoices
   public async getInvoices(filters?: any) {
     try {
@@ -237,6 +278,8 @@ class Database {
         return this.getProducts(conditions);
       case 'customers':
         return this.getCustomers(conditions);
+      case 'bills':
+        return this.getBills(conditions);
       case 'invoices':
         return this.getInvoices(conditions);
       default:
@@ -250,6 +293,8 @@ class Database {
         return this.createProduct(data);
       case 'customers':
         return this.createCustomer(data);
+      case 'bills':
+        return this.createBill(data);
       case 'invoices':
         return this.createInvoice(data);
       default:

@@ -11,6 +11,7 @@ import { notFound } from './middleware/notFound.js';
 // Import routes
 import productRoutes from './routes/products.js';
 import customerRoutes from './routes/customers.js';
+import billRoutes from './routes/bills.js';
 import invoiceRoutes from './routes/invoices.js';
 import inventoryRoutes from './routes/inventory.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -47,6 +48,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/bills', billRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
