@@ -12,10 +12,12 @@ const Inventory: React.FC = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedProductCategory, setSelectedProductCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const categories = ['all', t('inventory.chains'), t('inventory.rings'), t('inventory.earrings'), t('inventory.bracelets'), t('inventory.necklaces'), t('inventory.bangles')];
+  const productCategories = ['all', 'Men', 'Women', 'Kids'];
 
   useEffect(() => {
     loadProducts();
@@ -23,7 +25,7 @@ const Inventory: React.FC = () => {
 
   useEffect(() => {
     filterProducts();
-  }, [products, searchTerm, selectedCategory]);
+  }, [products, searchTerm, selectedCategory, selectedProductCategory]);
 
   const loadProducts = async () => {
     try {
@@ -49,6 +51,10 @@ const Inventory: React.FC = () => {
     
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    if (selectedProductCategory !== 'all') {
+      filtered = filtered.filter(product => product.product_category === selectedProductCategory);
     }
     
     setFilteredProducts(filtered);
@@ -125,6 +131,7 @@ const Inventory: React.FC = () => {
     const [formData, setFormData] = useState({
       name: product?.name || '',
       category: product?.category || 'Chains',
+      product_category: product?.product_category || '',
       sku: product?.sku || '',
       barcode: product?.barcode || '',
       weight: product?.weight || 0,
@@ -289,6 +296,22 @@ const Inventory: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gender/Age Category
+                </label>
+                <select
+                  value={formData.product_category}
+                  onChange={(e) => setFormData({ ...formData, product_category: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                >
+                  <option value="">Select Gender/Age Category</option>
+                  <option value="Men">Men</option>
+                  <option value="Women">Women</option>
+                  <option value="Kids">Kids</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('inventory.sku')} *
                 </label>
                 <input
@@ -356,16 +379,16 @@ const Inventory: React.FC = () => {
                   </button>
                 </div>
                 {isScanning && (
-                  <p className="text-xs text-amber-600 mt-1 flex items-center">
+                  <div className="text-xs text-amber-600 mt-1 flex items-center">
                     <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
                     Scanning barcode...
-                  </p>
+                  </div>
                 )}
                 {formData.barcode && !isScanning && (
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
+                  <div className="text-xs text-green-600 mt-1 flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                     Barcode ready
-                  </p>
+                  </div>
                 )}
               </div>
               
@@ -558,6 +581,21 @@ const Inventory: React.FC = () => {
                 ))}
               </select>
             </div>
+            
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={selectedProductCategory}
+                onChange={(e) => setSelectedProductCategory(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                {productCategories.map(category => (
+                  <option key={category} value={category}>
+                    {category === 'all' ? 'All Gender/Age' : category}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -570,6 +608,7 @@ const Inventory: React.FC = () => {
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.product')}</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.skuBarcode')}</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Gender/Age</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.weight')}</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.rate')}</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Stock</th>
@@ -593,6 +632,21 @@ const Inventory: React.FC = () => {
                         <p className="text-xs text-gray-600">{product.barcode}</p>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {product.product_category ? (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        product.product_category === 'Men' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : product.product_category === 'Women'
+                          ? 'bg-pink-100 text-pink-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {product.product_category}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">Not set</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-900">{product.weight}g</p>

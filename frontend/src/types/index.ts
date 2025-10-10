@@ -2,6 +2,7 @@ export interface Product {
   id: string;
   name: string;
   category: string;
+  product_category?: 'Men' | 'Women' | 'Kids';
   sku: string;
   barcode?: string;
   weight: number; // in grams

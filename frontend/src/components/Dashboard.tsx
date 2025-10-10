@@ -186,6 +186,9 @@ const Dashboard: React.FC = () => {
 
   const calculateCategoryData = (products: Product[]) => {
     const categoryColors: { [key: string]: string } = {
+      'Men': '#3B82F6',
+      'Women': '#EC4899', 
+      'Kids': '#10B981',
       'Chains': '#F59E0B',
       'Rings': '#EAB308', 
       'Earrings': '#FCD34D',
@@ -198,12 +201,16 @@ const Dashboard: React.FC = () => {
       'Other': '#6B7280'
     };
     
-    // Count products by category
+    // Count products by product_category (gender/age) if available, otherwise by category
     const categoryCounts: { [key: string]: number } = {};
     products.forEach(product => {
-      if (product.status === 'active' && product.category) {
-        const category = product.category.trim();
-        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+      if (product.status === 'active') {
+        // Prefer product_category over category for better classification
+        const category = product.product_category || product.category;
+        if (category) {
+          const categoryName = category.trim();
+          categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1;
+        }
       }
     });
     
