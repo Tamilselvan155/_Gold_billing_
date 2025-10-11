@@ -160,7 +160,7 @@ const Dashboard: React.FC = () => {
       setRecentInvoices(recentInvoicesData);
       setRecentBills(recentBillsData);
       setExchangeBills(exchangeBillsData);
-      setLowStockProducts(lowStock);
+    setLowStockProducts(lowStock);
       
       // Calculate bill statistics from ALL data, not just recent 10
       const allBills = validBills.filter(bill => !bill.bill_number?.startsWith('EXCH-'));
@@ -767,13 +767,13 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">Recent Transactions</h2>
             <div className="flex items-center space-x-2">
-              <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+            <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
                 {activeTab === 'all' ? recentInvoices.length + recentBills.length + exchangeBills.length :
                  activeTab === 'invoices' ? recentInvoices.length :
                  activeTab === 'bills' ? recentBills.length :
                  exchangeBills.length} transactions
-              </span>
-            </div>
+            </span>
+          </div>
           </div>
           
           {/* Transaction Type Tabs */}
@@ -842,7 +842,7 @@ const Dashboard: React.FC = () => {
                 
                 return (
                   <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3 flex-1">
+                <div className="flex items-center space-x-3 flex-1">
                       <div className={`p-2 rounded-full ${
                         isExchange ? 'bg-green-100' :
                         isInvoice ? 'bg-blue-100' :
@@ -853,8 +853,8 @@ const Dashboard: React.FC = () => {
                           isInvoice ? 'text-blue-600' :
                           'text-amber-600'
                         }`} />
-                      </div>
-                      <div>
+                  </div>
+                  <div>
                         <p className="font-medium text-gray-900">
                           {transaction.invoice_number || transaction.bill_number}
                         </p>
@@ -874,18 +874,18 @@ const Dashboard: React.FC = () => {
                             </span>
                           )}
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
                         <p className="font-medium text-gray-900">₹{(transaction.total_amount || 0).toLocaleString()}</p>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                    <span className={`text-xs px-2 py-1 rounded-full ${
                           transaction.payment_status === 'paid' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
                           {transaction.payment_status}
-                        </span>
+                    </span>
                         {isExchange && (transaction as any).exchange_difference !== undefined && (
                           <p className={`text-xs font-medium ${
                             (transaction as any).exchange_difference >= 0 ? 'text-red-600' : 'text-green-600'
@@ -893,16 +893,16 @@ const Dashboard: React.FC = () => {
                             {(transaction as any).exchange_difference >= 0 ? 'Pay' : 'Receive'} ₹{Math.abs((transaction as any).exchange_difference).toLocaleString()}
                           </p>
                         )}
-                      </div>
-                      <button
-                        onClick={() => generateInvoicePDF(transaction)}
-                        className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
-                        title="Download PDF"
-                      >
-                        <Download className="h-4 w-4" />
-                      </button>
-                    </div>
                   </div>
+                  <button
+                        onClick={() => generateInvoicePDF(transaction)}
+                    className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
+                        title="Download PDF"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
                 );
               });
             })()}

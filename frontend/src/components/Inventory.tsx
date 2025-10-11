@@ -136,6 +136,8 @@ const Inventory: React.FC = () => {
       barcode: product?.barcode || '',
       weight: product?.weight || 0,
       purity: product?.purity || '22K',
+      making_charge: product?.making_charge || 0,
+      current_rate: product?.current_rate || 0,
       stock_quantity: product?.stock_quantity || 0,
       min_stock_level: product?.min_stock_level || 1,
       status: product?.status || 'active',
@@ -469,6 +471,10 @@ const Inventory: React.FC = () => {
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
+              
+              {/* Hidden fields for making_charge and current_rate - required by database but not shown to user */}
+              <input type="hidden" name="making_charge" value={formData.making_charge} />
+              <input type="hidden" name="current_rate" value={formData.current_rate} />
             </div>
             
             <div className="flex space-x-4 pt-4">

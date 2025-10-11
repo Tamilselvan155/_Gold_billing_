@@ -889,7 +889,7 @@ const Billing: React.FC = () => {
 
   return (
     <>
-      <div className="space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1436,16 +1436,16 @@ const Billing: React.FC = () => {
 
           {/* Calculation Panel - Only show for billing and invoice tabs */}
           {activeTab !== 'exchange' && (
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {activeTab === 'billing' ? t('billing.billSummaryDeductStock') : t('billing.invoiceSummaryQuoteEstimate')}
-              </h2>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t('billing.subtotal')}:</span>
-                  <span className="font-medium">₹{(currentBill.subtotal || 0).toLocaleString()}</span>
-                </div>
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {activeTab === 'billing' ? t('billing.billSummaryDeductStock') : t('billing.invoiceSummaryQuoteEstimate')}
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-600">{t('billing.subtotal')}:</span>
+                <span className="font-medium">₹{(currentBill.subtotal || 0).toLocaleString()}</span>
+              </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">{t('billing.discount')}:</span>
@@ -1557,8 +1557,8 @@ const Billing: React.FC = () => {
                   </select>
                 </div>
               </div>
-              </div>
             </div>
+          </div>
           )}
 
           {/* Exchange Bills - Only show for exchange tab */}
@@ -1625,15 +1625,15 @@ const Billing: React.FC = () => {
 
           {/* All Bills/Invoices - Only show for billing and invoice tabs */}
           {activeTab !== 'exchange' && (
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {activeTab === 'billing' ? t('billing.allBills') : t('billing.allInvoices')}
-                </h2>
-                <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
-                  {activeTab === 'billing' ? recentBills.length : recentInvoices.length} {activeTab === 'billing' ? t('billing.bills') : t('billing.invoices')}
-                </span>
-              </div>
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {activeTab === 'billing' ? t('billing.allBills') : t('billing.allInvoices')}
+              </h2>
+              <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                {activeTab === 'billing' ? recentBills.length : recentInvoices.length} {activeTab === 'billing' ? t('billing.bills') : t('billing.invoices')}
+              </span>
+            </div>
             
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {activeTab === 'billing' ? (
@@ -1702,7 +1702,7 @@ const Billing: React.FC = () => {
                 </div>
               )}
             </div>
-            </div>
+          </div>
           )}
         </div>
       </div>
@@ -1714,7 +1714,7 @@ const Billing: React.FC = () => {
           onSelect={setSelectedCustomer}
         />
       )}
-      </div>
+    </div>
     </>
   );
 };
