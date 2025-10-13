@@ -73,6 +73,7 @@ export const createProduct = async (req: Request, res: Response) => {
     const {
       name,
       category,
+      product_category,
       sku,
       barcode,
       weight,
@@ -93,11 +94,11 @@ export const createProduct = async (req: Request, res: Response) => {
     }
     
     const stmt = Database.prepare(`
-      INSERT INTO products (name, category, sku, barcode, weight, purity, making_charge, current_rate, stock_quantity, min_stock_level, description)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (name, category, product_category, sku, barcode, weight, purity, making_charge, current_rate, stock_quantity, min_stock_level, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
-    const result = stmt.run(name, category, sku, barcode, weight, purity, making_charge, current_rate, stock_quantity, min_stock_level, description);
+    const result = stmt.run(name, category, product_category, sku, barcode, weight, purity, making_charge, current_rate, stock_quantity, min_stock_level, description);
     
     // Get the created product
     const getProduct = Database.prepare('SELECT * FROM products WHERE id = ?');
