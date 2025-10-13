@@ -13,11 +13,13 @@ const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProductCategory, setSelectedProductCategory] = useState('all');
+  const [selectedProductCategory, setSelectedProductCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
 
   const categories = ['all', t('inventory.chains'), t('inventory.rings'), t('inventory.earrings'), t('inventory.bracelets'), t('inventory.necklaces'), t('inventory.bangles')];
+  const productCategories = ['all', 'Men', 'Women', 'Kids'];
   const productCategories = ['all', 'Men', 'Women', 'Kids'];
 
   useEffect(() => {
@@ -26,6 +28,7 @@ const Inventory: React.FC = () => {
 
   useEffect(() => {
     filterProducts();
+  }, [products, searchTerm, selectedCategory, selectedProductCategory]);
   }, [products, searchTerm, selectedCategory, selectedProductCategory]);
 
   const loadProducts = async () => {
@@ -52,6 +55,10 @@ const Inventory: React.FC = () => {
     
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    if (selectedProductCategory !== 'all') {
+      filtered = filtered.filter(product => product.product_category === selectedProductCategory);
     }
     
     if (selectedProductCategory !== 'all') {
@@ -129,6 +136,7 @@ const Inventory: React.FC = () => {
     onCancel: () => void;
   }> = ({ product, onSubmit, onCancel }) => {
     const { success, error } = useToast();
+    const { success, error } = useToast();
     const [formData, setFormData] = useState({
       name: product?.name || '',
       category: product?.category || 'Chains',
@@ -139,10 +147,118 @@ const Inventory: React.FC = () => {
       purity: product?.purity || '22K',
       making_charge: product?.making_charge || 0,
       current_rate: product?.current_rate || 0,
+      current_rate: product?.current_rate || 0,
       stock_quantity: product?.stock_quantity || 0,
       min_stock_level: product?.min_stock_level || 1,
       status: product?.status || 'active',
     });
+
+    // Barcode scanner states
+    const [isScanning, setIsScanning] = useState(false);
+    const barcodeInputRef = useRef<HTMLInputElement>(null);
+    const barcodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Barcode scanner functions
+    const validateBarcode = (barcode: string): boolean => {
+      if (!barcode || barcode.length < 3) return false;
+      const barcodeRegex = /^[A-Za-z0-9\-_]+$/;
+      return barcodeRegex.test(barcode);
+    };
+
+    const handleBarcodeInput = (value: string) => {
+      setFormData({ ...formData, barcode: value });
+      
+      // Clear existing timeout
+      if (barcodeTimeoutRef.current) {
+        clearTimeout(barcodeTimeoutRef.current);
+      }
+
+      // Set a timeout to process barcode after user stops typing
+      barcodeTimeoutRef.current = setTimeout(() => {
+        if (value.trim()) {
+          processBarcode(value.trim());
+        }
+      }, 100);
+    };
+
+    const processBarcode = (barcode: string) => {
+      if (!validateBarcode(barcode)) {
+        error('Invalid barcode format');
+        return;
+      }
+
+      setIsScanning(true);
+      
+      // Check if barcode already exists (excluding current product if editing)
+      const existingProduct = products.find(p => p.barcode === barcode && p.id !== product?.id);
+      
+      if (existingProduct) {
+        error(`Barcode "${barcode}" already exists for product "${existingProduct.name}"`);
+        setIsScanning(false);
+        return;
+      }
+      
+      // Simulate barcode processing delay
+      setTimeout(() => {
+        setFormData(prev => ({ ...prev, barcode }));
+        success('Barcode scanned successfully!');
+        setIsScanning(false);
+      }, 300);
+    };
+
+    const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && formData.barcode.trim()) {
+        e.preventDefault();
+        processBarcode(formData.barcode.trim());
+      }
+    };
+
+    const handleScanClick = () => {
+      if (barcodeInputRef.current) {
+        barcodeInputRef.current.focus();
+      }
+    };
+
+    const generateBarcode = () => {
+      // Generate a simple barcode based on product name and timestamp
+      const timestamp = Date.now().toString().slice(-6);
+      const productCode = formData.name.replace(/[^A-Z0-9]/gi, '').substring(0, 4).toUpperCase();
+      const generatedBarcode = `${productCode}${timestamp}`;
+      
+      setFormData(prev => ({ ...prev, barcode: generatedBarcode }));
+      success('Barcode generated successfully!');
+    };
+
+    // Focus barcode input on component mount
+    useEffect(() => {
+      if (barcodeInputRef.current) {
+        barcodeInputRef.current.focus();
+      }
+    }, []);
+
+    // Keyboard shortcut to focus barcode scanner (Ctrl/Cmd + B)
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+          e.preventDefault();
+          if (barcodeInputRef.current) {
+            barcodeInputRef.current.focus();
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (barcodeTimeoutRef.current) {
+          clearTimeout(barcodeTimeoutRef.current);
+        }
+      };
+    }, []);
 
     // Barcode scanner states
     const [isScanning, setIsScanning] = useState(false);
@@ -327,15 +443,23 @@ const Inventory: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
                   {t('inventory.barcode')}
                 </label>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
                     Ctrl+B to focus
                   </span>
                 </div>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                    Ctrl+B to focus
+                  </span>
+                </div>
                 <div className="flex space-x-2">
                   <div className="flex-1 relative">
+                  <div className="flex-1 relative">
                   <input
+                      ref={barcodeInputRef}
                       ref={barcodeInputRef}
                     type="text"
                     value={formData.barcode}
@@ -352,8 +476,29 @@ const Inventory: React.FC = () => {
                       </div>
                     )}
                   </div>
+                      onChange={(e) => handleBarcodeInput(e.target.value)}
+                      onKeyDown={handleBarcodeKeyDown}
+                      placeholder="Scan or enter barcode..."
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm"
+                      disabled={isScanning}
+                      title="Scan barcode or type manually. Press Enter to process."
+                    />
+                    {isScanning && (
+                      <div className="absolute right-3 top-2.5">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-500 border-t-transparent"></div>
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="button"
+                    onClick={handleScanClick}
+                    disabled={isScanning}
+                    className={`px-3 py-2 rounded-lg transition-colors ${
+                      isScanning 
+                        ? 'bg-amber-100 text-amber-600 cursor-not-allowed' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                    title="Click to focus barcode scanner"
                     onClick={handleScanClick}
                     disabled={isScanning}
                     className={`px-3 py-2 rounded-lg transition-colors ${
@@ -378,7 +523,32 @@ const Inventory: React.FC = () => {
                   >
                     <Package className="h-4 w-4" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={generateBarcode}
+                    disabled={isScanning || !formData.name.trim()}
+                    className={`px-3 py-2 rounded-lg transition-colors ${
+                      isScanning || !formData.name.trim()
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                    title="Generate barcode based on product name"
+                  >
+                    <Package className="h-4 w-4" />
+                  </button>
                 </div>
+                {isScanning && (
+                  <div className="text-xs text-amber-600 mt-1 flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
+                    Scanning barcode...
+                  </div>
+                )}
+                {formData.barcode && !isScanning && (
+                  <div className="text-xs text-green-600 mt-1 flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Barcode ready
+                  </div>
+                )}
                 {isScanning && (
                   <div className="text-xs text-amber-600 mt-1 flex items-center">
                     <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
@@ -581,6 +751,21 @@ const Inventory: React.FC = () => {
                 {categories.map(category => (
                   <option key={category} value={category}>
                     {category === 'all' ? t('common.allCategories') : category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={selectedProductCategory}
+                onChange={(e) => setSelectedProductCategory(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                {productCategories.map(category => (
+                  <option key={category} value={category}>
+                    {category === 'all' ? 'All Gender/Age' : category}
                   </option>
                 ))}
               </select>

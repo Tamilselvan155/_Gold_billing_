@@ -13,6 +13,12 @@ import {
   CalendarDays,
   Clock,
   XCircle
+  Download,
+  RefreshCw,
+  Filter,
+  CalendarDays,
+  Clock,
+  XCircle
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -40,7 +46,18 @@ const Dashboard: React.FC = () => {
     invoicesValue: 0,
     exchangeValue: 0
   });
+  const [billStats, setBillStats] = useState({
+    totalBills: 0,
+    totalInvoices: 0,
+    totalExchangeBills: 0,
+    billsValue: 0,
+    invoicesValue: 0,
+    exchangeValue: 0
+  });
 
+  const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
+  const [recentBills, setRecentBills] = useState<any[]>([]);
+  const [exchangeBills, setExchangeBills] = useState<any[]>([]);
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [recentBills, setRecentBills] = useState<any[]>([]);
   const [exchangeBills, setExchangeBills] = useState<any[]>([]);
@@ -61,10 +78,32 @@ const Dashboard: React.FC = () => {
     averageSale: 0
   });
   const [activeTab, setActiveTab] = useState<'all' | 'invoices' | 'bills' | 'exchange'>('all');
+  const [salesData, setSalesData] = useState<Array<{ month: string; sales: number }>>([]);
+  const [categoryData, setCategoryData] = useState<Array<{ name: string; value: number; color: string }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [filterType, setFilterType] = useState<'week' | 'month' | 'custom'>('month');
+  const [customDateRange, setCustomDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filteredSalesData, setFilteredSalesData] = useState<Array<{ period: string; sales: number }>>([]);
+  const [filteredStats, setFilteredStats] = useState({
+    totalSales: 0,
+    totalTransactions: 0,
+    averageSale: 0
+  });
+  const [activeTab, setActiveTab] = useState<'all' | 'invoices' | 'bills' | 'exchange'>('all');
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (recentInvoices.length > 0) {
+      applyFilter();
+    }
+  }, [filterType, customDateRange, recentInvoices]);
 
   useEffect(() => {
     if (recentInvoices.length > 0) {
@@ -425,6 +464,7 @@ const Dashboard: React.FC = () => {
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.text(t('app.title'), pageWidth / 2, yPosition, { align: 'center' });
+    doc.text(t('app.title'), pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 10;
 
     doc.setFontSize(16);
@@ -447,6 +487,11 @@ const Dashboard: React.FC = () => {
     yPosition += 10;
 
     doc.setFont('helvetica', 'bold');
+    doc.text(t('billing.item'), margin, yPosition);
+    doc.text(`${t('common.weight')} (g)`, margin + 60, yPosition);
+    doc.text(t('common.rate'), margin + 90, yPosition);
+    doc.text(t('billing.qty'), margin + 120, yPosition);
+    doc.text(t('common.total'), margin + 140, yPosition);
     doc.text(t('billing.item'), margin, yPosition);
     doc.text(`${t('common.weight')} (g)`, margin + 60, yPosition);
     doc.text(t('common.rate'), margin + 90, yPosition);
@@ -475,26 +520,33 @@ const Dashboard: React.FC = () => {
 
     doc.setFont('helvetica', 'bold');
     doc.text(`${t('common.subtotal')}: ₹${invoice.subtotal?.toLocaleString() || '0'}`, margin + 100, yPosition);
+    doc.text(`${t('common.subtotal')}: ₹${invoice.subtotal?.toLocaleString() || '0'}`, margin + 100, yPosition);
     yPosition += 8;
     if (invoice.discount_amount && invoice.discount_amount > 0) {
+      doc.text(`${t('common.discount')} (${invoice.discount_percentage}%): -₹${invoice.discount_amount.toLocaleString()}`, margin + 100, yPosition);
       doc.text(`${t('common.discount')} (${invoice.discount_percentage}%): -₹${invoice.discount_amount.toLocaleString()}`, margin + 100, yPosition);
       yPosition += 8;
     }
     if (invoice.tax_amount && invoice.tax_amount > 0) {
       doc.text(`${t('common.tax')} (${invoice.tax_percentage}%): ₹${invoice.tax_amount.toLocaleString()}`, margin + 100, yPosition);
+      doc.text(`${t('common.tax')} (${invoice.tax_percentage}%): ₹${invoice.tax_amount.toLocaleString()}`, margin + 100, yPosition);
       yPosition += 8;
     }
     doc.setFontSize(14);
+    doc.text(`${t('billing.totalAmount')}: ₹${invoice.total_amount?.toLocaleString() || '0'}`, margin + 100, yPosition);
     doc.text(`${t('billing.totalAmount')}: ₹${invoice.total_amount?.toLocaleString() || '0'}`, margin + 100, yPosition);
     yPosition += 15;
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     doc.text(`${t('billing.paymentMethod')}: ${invoice.payment_method?.toUpperCase() || 'CASH'}`, margin, yPosition);
+    doc.text(`${t('billing.paymentMethod')}: ${invoice.payment_method?.toUpperCase() || 'CASH'}`, margin, yPosition);
     yPosition += 8;
+    doc.text(`${t('billing.paymentStatus')}: ${invoice.payment_status?.toUpperCase() || 'PENDING'}`, margin, yPosition);
     doc.text(`${t('billing.paymentStatus')}: ${invoice.payment_status?.toUpperCase() || 'PENDING'}`, margin, yPosition);
     if (invoice.amount_paid && invoice.amount_paid > 0) {
       yPosition += 8;
+      doc.text(`${t('billing.amountPaid')}: ₹${invoice.amount_paid.toLocaleString()}`, margin, yPosition);
       doc.text(`${t('billing.amountPaid')}: ₹${invoice.amount_paid.toLocaleString()}`, margin, yPosition);
     }
 
@@ -523,6 +575,16 @@ const Dashboard: React.FC = () => {
                 ? 'text-lg sm:text-xl' 
                 : 'text-xl sm:text-2xl'
             }`}>
+    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 overflow-hidden h-full min-h-[120px]">
+      <div className="flex items-start justify-between h-full">
+        <div className="flex-1 min-w-0 pr-4 overflow-hidden">
+          <p className="text-gray-600 text-sm font-medium mb-2 truncate">{title}</p>
+          <div className="space-y-1">
+            <p className={`font-bold text-gray-900 break-all leading-tight ${
+              typeof value === 'number' && value > 1000000 
+                ? 'text-lg sm:text-xl' 
+                : 'text-xl sm:text-2xl'
+            }`}>
               {typeof value === 'number' && title.includes('Sales') 
                 ? `₹${value.toLocaleString()}` 
                 : value}
@@ -531,10 +593,13 @@ const Dashboard: React.FC = () => {
               <span className="text-green-600 text-sm font-medium flex items-center">
                 <TrendingUp className="h-4 w-4 mr-1 flex-shrink-0" />
                 <span className="truncate">{change}</span>
+                <TrendingUp className="h-4 w-4 mr-1 flex-shrink-0" />
+                <span className="truncate">{change}</span>
               </span>
             )}
           </div>
         </div>
+        <div className={`p-3 rounded-full ${color} flex-shrink-0`}>
         <div className={`p-3 rounded-full ${color} flex-shrink-0`}>
           {icon}
         </div>
@@ -593,6 +658,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-h-0">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-h-0">
         <StatCard
           title={t('dashboard.todaysSales')}
@@ -719,10 +785,17 @@ const Dashboard: React.FC = () => {
                filterType === 'month' ? 'Last 6 Months' : 
                'Custom Date Range'}
             </div>
+            <div className="text-sm text-gray-500">
+              {filterType === 'week' ? 'Last 8 Weeks' : 
+               filterType === 'month' ? 'Last 6 Months' : 
+               'Custom Date Range'}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={filteredSalesData.length > 0 ? filteredSalesData : salesData}>
+            <BarChart data={filteredSalesData.length > 0 ? filteredSalesData : salesData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey={filteredSalesData.length > 0 ? "period" : "month"} stroke="#6b7280" />
               <XAxis dataKey={filteredSalesData.length > 0 ? "period" : "month"} stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip 
