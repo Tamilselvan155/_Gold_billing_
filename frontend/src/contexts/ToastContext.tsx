@@ -21,24 +21,32 @@ export const useToast = () => {
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const success = (message: string) => {
     toast.success(message, {
-      duration: 4000,
+      duration: 6000,
       position: 'top-right',
       style: {
         background: '#10B981',
         color: '#fff',
         fontWeight: '500',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        fontSize: '14px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       },
     });
   };
 
   const error = (message: string) => {
     toast.error(message, {
-      duration: 5000,
+      duration: 7000,
       position: 'top-right',
       style: {
         background: '#EF4444',
         color: '#fff',
         fontWeight: '500',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        fontSize: '14px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       },
     });
   };
@@ -50,6 +58,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         background: '#F59E0B',
         color: '#fff',
         fontWeight: '500',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        fontSize: '14px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       },
     });
   };
@@ -63,20 +75,24 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       <Toaster
         toastOptions={{
-          duration: 4000,
+          duration: 6000,
           style: {
             background: '#363636',
             color: '#fff',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           },
           success: {
-            duration: 4000,
+            duration: 6000,
             iconTheme: {
               primary: '#10B981',
               secondary: '#fff',
             },
           },
           error: {
-            duration: 5000,
+            duration: 7000,
             iconTheme: {
               primary: '#EF4444',
               secondary: '#fff',

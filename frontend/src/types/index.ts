@@ -2,6 +2,7 @@ export interface Product {
   id: string;
   name: string;
   category: string;
+  product_category?: 'Men' | 'Women' | 'Kids';
   sku: string;
   barcode?: string;
   weight: number; // in grams
@@ -50,6 +51,13 @@ export interface Bill {
   payment_method: 'cash' | 'card' | 'upi' | 'bank_transfer';
   payment_status: 'paid' | 'partial' | 'pending';
   amount_paid: number;
+  // Exchange-specific fields
+  old_gold_weight?: number;
+  old_gold_purity?: string;
+  old_gold_rate?: number;
+  old_gold_value?: number;
+  exchange_rate?: number;
+  exchange_difference?: number;
   created_at: string;
   updated_at: string;
 }

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     category TEXT NOT NULL,
+    product_category TEXT CHECK (product_category IN ('Men', 'Women', 'Kids')),
     sku TEXT UNIQUE NOT NULL,
     barcode TEXT UNIQUE,
     weight REAL NOT NULL,
@@ -154,6 +155,7 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_product_category ON products(product_category);
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);

@@ -230,7 +230,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   aria-haspopup="true"
                 >
                   <User className="h-5 w-5" />
-                  <span className="hidden sm:block font-medium">Admin</span>
+                  <span className="hidden sm:block font-medium">{t('common.admin')}</span>
                   <MoreVertical className="h-4 w-4" />
                 </button>
 
@@ -243,7 +243,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     aria-orientation="vertical"
                   >
                     <div className="px-4 py-2 border-b border-amber-200/30 dark:border-gray-700/50">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Admin User</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{t('common.adminUser')}</p>
                       <p className="text-xs text-amber-600 dark:text-amber-400">admin@example.com</p>
                     </div>
                     <Link
@@ -252,7 +252,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       role="menuitem"
                     >
                       <User className="h-4 w-4 mr-3" />
-                      Profile
+                      {t('common.profile')}
                     </Link>
                     <Link
                       to="/settings"
@@ -260,14 +260,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       role="menuitem"
                     >
                       <Settings className="h-4 w-4 mr-3" />
-                      Settings
+                      {t('common.settings')}
                     </Link>
                     <div className="border-t border-amber-200/30 dark:border-gray-700/50 mt-2 pt-2">
                       <button 
                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:bg-red-50 dark:focus:bg-red-900/20 transition-all duration-200"
                         role="menuitem"
                       >
-                        Sign Out
+                        {t('common.signOut')}
                       </button>
                     </div>
                   </div>
@@ -304,7 +304,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {sidebarOpen && (
               <div className="p-6 border-b border-amber-200/30 dark:border-gray-700/50">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold gradient-text">Navigation</h2>
+                  <h2 className="text-lg font-semibold gradient-text">{t('common.navigation')}</h2>
                   {!isMobile && (
                     <button
                       onClick={toggleSidebar}
