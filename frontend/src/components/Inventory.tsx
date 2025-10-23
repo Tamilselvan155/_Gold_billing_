@@ -5,11 +5,13 @@
 // import { useLanguage } from '../contexts/LanguageContext';
 // import { useToast } from '../contexts/ToastContext';
 
-// const ProductForm: React.FC<{
+// interface ProductFormProps {
 //   product?: Product;
 //   onSubmit: (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => void;
 //   onCancel: () => void;
-// }> = ({ product, onSubmit, onCancel }) => {
+// }
+
+// const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel }) => {
 //   const { success, error } = useToast();
 //   const { t } = useLanguage();
 //   const [formData, setFormData] = useState<Omit<Product, 'id' | 'created_at' | 'updated_at'>>({
@@ -53,7 +55,7 @@
 
 //   const processBarcode = (barcode: string) => {
 //     if (!validateBarcode(barcode)) {
-//       error(t('error.invalidBarcode'));
+//       error('Invalid barcode format');
 //       return;
 //     }
 
@@ -61,7 +63,7 @@
 
 //     setTimeout(() => {
 //       setFormData(prev => ({ ...prev, barcode }));
-//       success(t('success.barcodeScanned'));
+//       success('Barcode scanned successfully!');
 //       setIsScanning(false);
 //     }, 300);
 //   };
@@ -84,7 +86,7 @@
 //     const productCode = formData.name.replace(/[^A-Z0-9]/gi, '').substring(0, 4).toUpperCase();
 //     const generatedBarcode = `${productCode}${timestamp}`;
 //     setFormData(prev => ({ ...prev, barcode: generatedBarcode }));
-//     success(t('success.barcodeGenerated'));
+//     success('Barcode generated successfully!');
 //   };
 
 //   useEffect(() => {
@@ -131,7 +133,7 @@
 //           <div className="grid grid-cols-2 gap-4">
 //             <div>
 //               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.productName')}
+//                 {t('inventory.productName')} *
 //               </label>
 //               <input
 //                 type="text"
@@ -157,22 +159,22 @@
 //             </div>
 //             <div>
 //               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.genderAgeCategory')}
+//                 Gender/Age Category
 //               </label>
 //               <select
 //                 value={formData.product_category || ''}
 //                 onChange={(e) => setFormData({ ...formData, product_category: e.target.value || null })}
 //                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
 //               >
-//                 <option value="">{t('inventory.selectGenderAgeCategory')}</option>
+//                 <option value="">Select Gender/Age Category</option>
 //                 {['Men', 'Women', 'Kids'].map(category => (
-//                   <option key={category} value={category}>{t(`inventory.${category.toLowerCase()}`)}</option>
+//                   <option key={category} value={category}>{category}</option>
 //                 ))}
 //               </select>
 //             </div>
 //             <div>
 //               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.sku')}
+//                 {t('inventory.sku')} *
 //               </label>
 //               <input
 //                 type="text"
@@ -195,7 +197,7 @@
 //                     value={formData.barcode}
 //                     onChange={(e) => handleBarcodeInput(e.target.value)}
 //                     onKeyDown={handleBarcodeKeyDown}
-//                     placeholder={t('inventory.barcodePlaceholder')}
+//                     placeholder="Scan or enter barcode..."
 //                     className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-monowarden-blockquotesono text-sm"
 //                     disabled={isScanning}
 //                     title="Scan barcode or type manually. Press Enter to process."
@@ -210,8 +212,9 @@
 //                   type="button"
 //                   onClick={handleScanClick}
 //                   disabled={isScanning}
-//                   className={`px-3 py-2 rounded-lg transition-colors ${isScanning ? 'bg-amber-100 text-amber-600 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-//                   title={t('button.scanBarcode')}
+//                   className={`px-3 py-2 rounded-lg transition-colors ${isScanning ? 'bg-amber-100 text-amber-600 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+//                     }`}
+//                   title="Click to focus barcode scanner"
 //                 >
 //                   <Scan className="h-4 w-4" />
 //                 </button>
@@ -219,8 +222,9 @@
 //                   type="button"
 //                   onClick={generateBarcode}
 //                   disabled={isScanning || !formData.name.trim()}
-//                   className={`px-3 py-2 rounded-lg transition-colors ${isScanning || !formData.name.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-//                   title={t('button.generateBarcode')}
+//                   className={`px-3 py-2 rounded-lg transition-colors ${isScanning || !formData.name.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+//                     }`}
+//                   title="Generate barcode based on product name"
 //                 >
 //                   <Package className="h-4 w-4" />
 //                 </button>
@@ -228,20 +232,18 @@
 //               {isScanning && (
 //                 <div className="text-xs text-amber-600 mt-1 flex items-center">
 //                   <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
-//                   {t('status.scanning')}
+//                   Scanning barcode...
 //                 </div>
 //               )}
 //               {formData.barcode && !isScanning && (
 //                 <div className="text-xs text-green-600 mt-1 flex items-center">
 //                   <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-//                   {t('status.barcodeReady')}
+//                   Barcode ready
 //                 </div>
 //               )}
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.weightGrams')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Weight (grams) *</label>
 //               <input
 //                 type="number"
 //                 step="0.01"
@@ -252,9 +254,7 @@
 //               />
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.purity')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Purity *</label>
 //               <select
 //                 value={formData.purity}
 //                 onChange={(e) => setFormData({ ...formData, purity: e.target.value })}
@@ -267,9 +267,7 @@
 //               </select>
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.currentRate')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Current Rate (per gram) *</label>
 //               <input
 //                 type="number"
 //                 step="0.01"
@@ -280,9 +278,7 @@
 //               />
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.makingCharge')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Making Charge</label>
 //               <input
 //                 type="number"
 //                 step="0.01"
@@ -292,9 +288,7 @@
 //               />
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.stockQuantity')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity *</label>
 //               <input
 //                 type="number"
 //                 value={formData.stock_quantity || ''}
@@ -304,9 +298,7 @@
 //               />
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.minStockLevel')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Stock Level *</label>
 //               <input
 //                 type="number"
 //                 value={formData.min_stock_level || ''}
@@ -316,16 +308,14 @@
 //               />
 //             </div>
 //             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 {t('inventory.status')}
-//               </label>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
 //               <select
 //                 value={formData.status}
 //                 onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
 //                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
 //               >
-//                 <option value="active">{t('active')}</option>
-//                 <option value="inactive">{t('inactive')}</option>
+//                 <option value="active">Active</option>
+//                 <option value="inactive">Inactive</option>
 //               </select>
 //             </div>
 //           </div>
@@ -335,14 +325,14 @@
 //               onClick={handleSubmit}
 //               className="flex-1 bg-amber-500 text-white py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors"
 //             >
-//               {product ? t('inventory.updateProduct') : t('inventory.addProduct')}
+//               {product ? 'Update Product' : 'Add Product'}
 //             </button>
 //             <button
 //               type="button"
 //               onClick={onCancel}
 //               className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
 //             >
-//               {t('inventory.cancel')}
+//               Cancel
 //             </button>
 //           </div>
 //         </div>
@@ -381,7 +371,7 @@
 //       setProducts(productData);
 //     } catch (err: unknown) {
 //       console.error('Error loading products:', err);
-//       error(t('error.loadProducts'));
+//       error('Failed to load products. Please try again.');
 //     }
 //   };
 
@@ -413,10 +403,10 @@
 //       const newProduct = await db.insert('products', productData);
 //       setProducts([...products, newProduct]);
 //       setShowAddModal(false);
-//       success(t('success.productAdded'));
+//       success('Product added successfully!');
 //     } catch (err: unknown) {
 //       console.error('Error adding product:', err);
-//       error(t('error.addProduct'));
+//       error('Failed to add product. Please try again.');
 //     }
 //   };
 
@@ -427,11 +417,11 @@
 //       if (updatedProduct) {
 //         setProducts(products.map(p => p.id === id ? updatedProduct : p));
 //         setEditingProduct(null);
-//         success(t('success product Updated'));
+//         success('Product updated successfully!');
 //       }
 //     } catch (err: unknown) {
 //       console.error('Error updating product:', err);
-//       error(t('error update Product'));
+//       error('Failed to update product. Please try again.');
 //     }
 //   };
 
@@ -441,24 +431,25 @@
 //         const db = Database.getInstance();
 //         await db.delete('products', id);
 //         setProducts(products.filter(p => p.id !== id));
-//         success(t('success product Deleted'));
+//         success('Product deleted successfully!');
 //       } catch (err: any) {
 //         console.error('Error deleting product:', err);
 //         if (err.response?.status === 400 && err.response?.data?.references) {
 //           const references = err.response.data.references;
-//           const message = t('error.productReferenced', { bills: references.bills, invoices: references.invoices });
+//           const message = `This product is referenced in ${references.bills} bill(s) and ${references.invoices} invoice(s). Do you want to delete it anyway? This will remove the product references from bills and invoices.`;
+
 //           if (window.confirm(message)) {
 //             try {
 //               await db.deleteWithCascade('products', id);
 //               setProducts(products.filter(p => p.id !== id));
-//               success(t('success.productDeletedWithReferences'));
+//               success('Product deleted successfully! References have been removed from bills and invoices.');
 //             } catch (cascadeErr: unknown) {
 //               console.error('Error in cascade delete:', cascadeErr);
-//               error(t('error.deleteWithCascade'));
+//               error('Failed to delete product even with cascade. Please try again.');
 //             }
 //           }
 //         } else {
-//           error(t('error delete Product'));
+//           error('Failed to delete product. Please try again.');
 //         }
 //       }
 //     }
@@ -483,7 +474,7 @@
 //           <button
 //             onClick={() => setShowAddModal(true)}
 //             className="flex items-center space-x-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-//             title={t('button.addProduct')}
+//             title="Add new product to inventory"
 //           >
 //             <Plus className="h-4 w-4" />
 //             <span>{t('inventory.addProduct')}</span>
@@ -527,7 +518,7 @@
 //               >
 //                 {productCategories.map(category => (
 //                   <option key={category} value={category}>
-//                     {category === 'all' ? t('common.allGenderAge') : t(`inventory.${category.toLowerCase()}`)}
+//                     {category === 'all' ? 'All Gender/Age' : category}
 //                   </option>
 //                 ))}
 //               </select>
@@ -543,10 +534,10 @@
 //               <tr>
 //                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.product')}</th>
 //                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.skuBarcode')}</th>
-//                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.genderAgeCategory')}</th>
+//                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Gender/Age</th>
 //                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.weight')}</th>
-//                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.stockQuantity')}</th>
-//                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.status')}</th>
+//                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Stock</th>
+//                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.status')}</th>
 //                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.actions')}</th>
 //               </tr>
 //             </thead>
@@ -581,13 +572,13 @@
 //                       <User className="h-4 w-4 text-[#F59E0B]" />
 //                       {product.product_category ? (
 //                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${product.product_category === 'Men' ? 'bg-blue-100 text-blue-800' :
-//                           product.product_category === 'Women' ? 'bg-pink-100 text-pink-800' :
-//                           'bg-green-100 text-green-800'
+//                             product.product_category === 'Women' ? 'bg-pink-100 text-pink-800' :
+//                               'bg-green-100 text-green-800'
 //                           }`}>
-//                           {t(`inventory.${product.product_category.toLowerCase()}`)}
+//                           {product.product_category}
 //                         </span>
 //                       ) : (
-//                         <span className="text-xs text-gray-400">{t('common.notSet')}</span>
+//                         <span className="text-xs text-gray-400">Not set</span>
 //                       )}
 //                     </div>
 //                   </td>
@@ -608,7 +599,7 @@
 //                   <td className="px-6 py-4">
 //                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
 //                       }`}>
-//                       {t(`status.${product.status}`)}
+//                       {product.status}
 //                     </span>
 //                   </td>
 //                   <td className="px-6 py-4">
@@ -616,21 +607,21 @@
 //                       <button
 //                         onClick={() => setEditingProduct(product)}
 //                         className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
-//                         title={t('button.editProduct')}
+//                         title="Edit product"
 //                       >
 //                         <CreditCard className="h-4 w-4" />
 //                       </button>
 //                       <button
 //                         onClick={() => handleDeleteProduct(product.id)}
 //                         className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-//                         title={t('button.deleteProduct')}
+//                         title="Delete product"
 //                       >
 //                         <Trash2 className="h-4 w-4" />
 //                       </button>
 //                       <button
 //                         onClick={() => setViewingProduct(product)}
 //                         className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-//                         title={t('button.viewDetails')}
+//                         title="View product details"
 //                       >
 //                         <Info className="h-4 w-4" />
 //                       </button>
@@ -664,171 +655,6 @@
 //         />
 //       )}
 
-//       {viewingProduct && (
-//         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-2 sm:p-4 z-50">
-//           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden">
-//             <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
-//               <div className="flex flex-col gap-2">
-//                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center flex-wrap">
-//                   <Package className="h-6 w-6 text-gray-600 mr-2" />
-//                   {viewingProduct.name}
-//                 </h2>
-//                 <div className="flex flex-wrap gap-2 sm:gap-4">
-//                   <span className="font-mono text-sm sm:text-base text-gray-800 px-3 py-1 rounded-md border border-gray-300 flex items-center">
-//                     <Hash className="inline h-4 w-4 mr-2 text-gray-500" />
-//                     {t('inventory.sku')}: {viewingProduct.sku}
-//                   </span>
-//                   {viewingProduct.barcode && (
-//                     <span className="font-mono text-sm sm:text-base text-gray-800 px-3 py-1 rounded-md border border-gray-300 flex items-center">
-//                       <Barcode className="inline h-4 w-4 mr-2 text-gray-500" />
-//                       {t('inventory.barcode')}: {viewingProduct.barcode}
-//                     </span>
-//                   )}
-//                 </div>
-//               </div>
-//               <button
-//                 onClick={() => setViewingProduct(null)}
-//                 className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100"
-//                 title={t('button.close')}
-//               >
-//                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-//                 </svg>
-//               </button>
-//             </div>
-//             <div className="p-4 sm:p-6 space-y-8 overflow-y-auto flex-grow">
-//               <section>
-//                 <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('section.classification')}</h3>
-//                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <User className="h-4 w-4 text-gray-500" />
-//                       {t('inventory.category')}
-//                     </label>
-//                     <p className="text-base font-semibold text-gray-900 break-words">{viewingProduct.category}</p>
-//                   </div>
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <Sparkles className="h-4 w-4 text-gray-500" />
-//                       {t('inventory.purity')}
-//                     </label>
-//                     <p className="text-base font-semibold text-gray-900">{viewingProduct.purity}</p>
-//                   </div>
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <User className="h-4 w-4 text-gray-500" />
-//                       {t('inventory.genderAgeCategory')}
-//                     </label>
-//                     <p className="text-sm sm:text-base text-gray-800 font-medium">
-//                       {viewingProduct.product_category ? t(`inventory.${viewingProduct.product_category.toLowerCase()}`) : t('common.notSet')}
-//                     </p>
-//                   </div>
-//                 </div>
-//               </section>
-//               <section>
-//                 <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('section.financials')}</h3>
-//                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-//                   <div className="p-3 sm:p-3 border rounded-lg">
-//                     <label className="text-sm font-medium text-gray-500 mb-1 flex items-center gap-1">
-//                       <IndianRupee className="h-5 w-4 text-gray-500" />
-//                       {t('inventory.currentRate')}
-//                     </label>
-//                     <p className="text-2xl sm:text-2xl font-bold text-gray-900">{viewingProduct.current_rate}</p>
-//                   </div>
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-sm font-medium text-gray-500 mb-1 flex items-center gap-1">
-//                       <Wrench className="h-4 w-4 text-gray-500" />
-//                       {t('inventory.makingCharge')}
-//                     </label>
-//                     <p className="text-xl sm:text-2xl font-bold text-gray-900">{viewingProduct.making_charge || 0}%</p>
-//                   </div>
-//                 </div>
-//               </section>
-//               <section>
-//                 <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('section.inventoryStatus')}</h3>
-//                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <Scale className="h-4 w-4 text-gray-500" />
-//                       {t('common.unitWeight')}
-//                     </label>
-//                     <p className="text-base font-semibold text-gray-900">{viewingProduct.weight}g</p>
-//                   </div>
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <Package className="h-4 w-4 text-gray-500" />
-//                       {t('inventory.stockQuantity')}
-//                     </label>
-//                     <div className="flex items-center gap-2 flex-wrap">
-//                       <p className="text-base font-semibold text-gray-900">{viewingProduct.stock_quantity}</p>
-//                       {viewingProduct.stock_quantity <= viewingProduct.min_stock_level && (
-//                         <span className="text-xs font-semibold text-red-600">{t('status.lowStock')}</span>
-//                       )}
-//                     </div>
-//                   </div>
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <Gauge className="h-4 w-4 text-gray-500" />
-//                       {t('inventory.minStockLevel')}
-//                     </label>
-//                     <p className="text-base font-semibold text-gray-900">{viewingProduct.min_stock_level}</p>
-//                   </div>
-//                 </div>
-//               </section>
-//               <section>
-//                 <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('section.auditHistory')}</h3>
-//                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <Clock className="h-4 w-4 text-gray-500" />
-//                       {t('audit.created')}
-//                     </label>
-//                     <p className="text-sm text-gray-900">
-//                       {new Date(viewingProduct.created_at).toLocaleDateString()} at{' '}
-//                       <span className="font-mono">{new Date(viewingProduct.created_at).toLocaleTimeString()}</span>
-//                     </p>
-//                   </div>
-//                   <div className="p-3 sm:p-4 border rounded-lg">
-//                     <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-//                       <Clock className="h-4 w-4 text-gray-500" />
-//                       {t('audit.lastModified')}
-//                     </label>
-//                     <p className="text-sm text-gray-900">
-//                       {new Date(viewingProduct.updated_at).toLocaleDateString()} at{' '}
-//                       <span className="font-mono">{new Date(viewingProduct.updated_at).toLocaleTimeString()}</span>
-//                     </p>
-//                   </div>
-//                 </div>
-//               </section>
-//             </div>
-//             <div className="p-4 sm:p-6 border-t border-gray-200 sticky bottom-0 bg-white z-10">
-//               <div className="flex flex-col sm:flex-row justify-end gap-3">
-//                 <button
-//                   onClick={() => setViewingProduct(null)}
-//                   className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium w-full sm:w-auto"
-//                 >
-//                   {t('button.close')}
-//                 </button>
-//                 <button
-//                   onClick={() => {
-//                     setViewingProduct(null);
-//                     setEditingProduct(viewingProduct);
-//                   }}
-//                   className="flex items-center justify-center bg-amber-500 text-white px-5 py-2 rounded-lg transition-colors font-medium shadow-sm w-full sm:w-auto"
-//                 >
-//                   <Wrench className="h-5 w-5 mr-2" />
-//                   {t('button.editProductDetails')}
-//                 </button>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default Inventory;
 
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -838,351 +664,341 @@ import { Product } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 
-  const ProductForm: React.FC<{
-    product?: Product;
-    onSubmit: (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => void;
-    onCancel: () => void;
-  }> = ({ product, onSubmit, onCancel }) => {
-    const { success, error } = useToast();
-    const { t } = useLanguage();
-    const [formData, setFormData] = useState<Omit<Product, 'id' | 'created_at' | 'updated_at'>>({
-      name: product?.name || '',
-      category: product?.category || 'Chains',
-      product_category: product?.product_category || null,
-      sku: product?.sku || '',
-      barcode: product?.barcode || '',
-      weight: product?.weight || 0,
-      purity: product?.purity || '22K',
-      making_charge: product?.making_charge || 0,
-      current_rate: product?.current_rate || 0,
-      stock_quantity: product?.stock_quantity || 0,
-      min_stock_level: product?.min_stock_level || 1,
-      status: product?.status || 'active',
-    });
+interface ProductFormProps {
+  product?: Product;
+  onSubmit: (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => void;
+  onCancel: () => void;
+}
 
-    const barcodeInputRef = useRef<HTMLInputElement>(null);
-    const barcodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [isScanning, setIsScanning] = useState<boolean>(false);
+const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel }) => {
+  const { success, error } = useToast();
+  const { t } = useLanguage();
+  const [formData, setFormData] = useState<Omit<Product, 'id' | 'created_at' | 'updated_at'>>({
+    name: product?.name || '',
+    category: product?.category || 'Chains',
+    product_category: product?.product_category || null,
+    sku: product?.sku || '',
+    barcode: product?.barcode || '',
+    weight: product?.weight || 0,
+    purity: product?.purity || '22K',
+    making_charge: product?.making_charge || 0,
+    current_rate: product?.current_rate || 0,
+    stock_quantity: product?.stock_quantity || 0,
+    min_stock_level: product?.min_stock_level || 1,
+    status: product?.status || 'active',
+  });
 
-    const validateBarcode = (barcode: string): boolean => {
-      if (!barcode || barcode.length < 3) return false;
-      const barcodeRegex = /^[A-Za-z0-9\-_]+$/;
-      return barcodeRegex.test(barcode);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const barcodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+
+  const validateBarcode = (barcode: string): boolean => {
+    if (!barcode || barcode.length < 3) return false;
+    const barcodeRegex = /^[A-Za-z0-9\-_]+$/;
+    return barcodeRegex.test(barcode);
+  };
+
+  const handleBarcodeInput = (value: string) => {
+    setFormData({ ...formData, barcode: value });
+
+    if (barcodeTimeoutRef.current) {
+      clearTimeout(barcodeTimeoutRef.current);
+    }
+
+    barcodeTimeoutRef.current = setTimeout(() => {
+      if (value.trim()) {
+        processBarcode(value.trim());
+      }
+    }, 100);
+  };
+
+  const processBarcode = (barcode: string) => {
+    if (!validateBarcode(barcode)) {
+      error('Invalid barcode format');
+      return;
+    }
+
+    setIsScanning(true);
+
+    setTimeout(() => {
+      setFormData(prev => ({ ...prev, barcode }));
+      success('Barcode scanned successfully!');
+      setIsScanning(false);
+    }, 300);
+  };
+
+  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && formData.barcode.trim()) {
+      e.preventDefault();
+      processBarcode(formData.barcode.trim());
+    }
+  };
+
+  const handleScanClick = () => {
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+  };
+
+  const generateBarcode = () => {
+    const timestamp = Date.now().toString().slice(-6);
+    const productCode = formData.name.replace(/[^A-Z0-9]/gi, '').substring(0, 4).toUpperCase();
+    const generatedBarcode = `${productCode}${timestamp}`;
+    setFormData(prev => ({ ...prev, barcode: generatedBarcode }));
+    success('Barcode generated successfully!');
+  };
+
+  useEffect(() => {
+    if (barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.focus();
+        }
+      }
     };
 
-    const handleBarcodeInput = (value: string) => {
-      setFormData({ ...formData, barcode: value });
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
+  useEffect(() => {
+    return () => {
       if (barcodeTimeoutRef.current) {
         clearTimeout(barcodeTimeoutRef.current);
       }
-
-      barcodeTimeoutRef.current = setTimeout(() => {
-        if (value.trim()) {
-          processBarcode(value.trim());
-        }
-      }, 100);
     };
+  }, []);
 
-    const processBarcode = (barcode: string) => {
-      if (!validateBarcode(barcode)) {
-        error(t('error.invalidBarcode'));
-        return;
-      }
+  const handleSubmit = () => {
+    onSubmit(formData);
+  };
 
-      setIsScanning(true);
-
-      setTimeout(() => {
-        setFormData(prev => ({ ...prev, barcode }));
-        success(t('success.barcodeScanned'));
-        setIsScanning(false);
-      }, 300);
-    };
-
-    const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && formData.barcode.trim()) {
-        e.preventDefault();
-        processBarcode(formData.barcode.trim());
-      }
-    };
-
-    const handleScanClick = () => {
-      if (barcodeInputRef.current) {
-        barcodeInputRef.current.focus();
-      }
-    };
-
-    const generateBarcode = () => {
-      const timestamp = Date.now().toString().slice(-6);
-      const productCode = formData.name.replace(/[^A-Z0-9]/gi, '').substring(0, 4).toUpperCase();
-      const generatedBarcode = `${productCode}${timestamp}`;
-      setFormData(prev => ({ ...prev, barcode: generatedBarcode }));
-      success(t('success.barcodeGenerated'));
-    };
-
-    useEffect(() => {
-      if (barcodeInputRef.current) {
-        barcodeInputRef.current.focus();
-      }
-    }, []);
-
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-          e.preventDefault();
-          if (barcodeInputRef.current) {
-            barcodeInputRef.current.focus();
-          }
-        }
-      };
-
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
-    useEffect(() => {
-      return () => {
-        if (barcodeTimeoutRef.current) {
-          clearTimeout(barcodeTimeoutRef.current);
-        }
-      };
-    }, []);
-
-    const handleSubmit = () => {
-      onSubmit(formData);
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">
-              {product ? t('inventory.editProduct') : t('inventory.addNewProduct')}
-            </h2>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.productName')}
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">
+            {product ? t('inventory.editProduct') : t('inventory.addNewProduct')}
+          </h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('inventory.productName')} *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                {t('common.category')} *
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                {['Chains', 'Rings', 'Earrings', 'Bracelets', 'Necklaces', 'Bangles'].map(category => (
+                  <option key={category} value={category}>{t(`inventory.${category.toLowerCase()}`)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Gender/Age Category
+              </label>
+              <select
+                value={formData.product_category || ''}
+                onChange={(e) => setFormData({ ...formData, product_category: e.target.value || null })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                <option value="">Select Gender/Age Category</option>
+                {['Men', 'Women', 'Kids'].map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('inventory.sku')} *
+              </label>
+              <input
+                type="text"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                required
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">{t('inventory.barcode')}</label>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Ctrl+B to focus</span>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.category')}
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                >
-                  {['Chains', 'Rings', 'Earrings', 'Bracelets', 'Necklaces', 'Bangles'].map(category => (
-                    <option key={category} value={category}>{t(`inventory.${category.toLowerCase()}`)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.genderAgeCategory')}
-                </label>
-                <select
-                  value={formData.product_category || ''}
-                  onChange={(e) => setFormData({ ...formData, product_category: e.target.value || null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                >
-                  <option value="">{t('inventory.selectGenderAgeCategory')}</option>
-                  {['Men', 'Women', 'Kids'].map(category => (
-                    <option key={category} value={category}>{t(`inventory.${category.toLowerCase()}`)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.sku')}
-                </label>
-                <input
-                  type="text"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">{t('inventory.barcode')}</label>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Ctrl+B to focus</span>
-                </div>
-                <div className="flex space-x-2">
-                  <div className="flex-1 relative">
-                    <input
-                      ref={barcodeInputRef}
-                      type="text"
-                      value={formData.barcode}
-                      onChange={(e) => handleBarcodeInput(e.target.value)}
-                      onKeyDown={handleBarcodeKeyDown}
-                      placeholder={t('inventory.barcodePlaceholder')}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-monowarden-blockquotesono text-sm"
-                      disabled={isScanning}
-                      title="Scan barcode or type manually. Press Enter to process."
-                    />
-                    {isScanning && (
-                      <div className="absolute right-3 top-2.5">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-500 border-t-transparent"></div>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleScanClick}
+              <div className="flex space-x-2">
+                <div className="flex-1 relative">
+                  <input
+                    ref={barcodeInputRef}
+                    type="text"
+                    value={formData.barcode}
+                    onChange={(e) => handleBarcodeInput(e.target.value)}
+                    onKeyDown={handleBarcodeKeyDown}
+                    placeholder="Scan or enter barcode..."
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-monowarden-blockquotesono text-sm"
                     disabled={isScanning}
-                    className={`px-3 py-2 rounded-lg transition-colors ${isScanning ? 'bg-amber-100 text-amber-600 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                    title={t('button.scanBarcode')}
-                  >
-                    <Scan className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={generateBarcode}
-                    disabled={isScanning || !formData.name.trim()}
-                    className={`px-3 py-2 rounded-lg transition-colors ${isScanning || !formData.name.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                    title={t('button.generateBarcode')}
-                  >
-                    <Package className="h-4 w-4" />
-                  </button>
+                    title="Scan barcode or type manually. Press Enter to process."
+                  />
+                  {isScanning && (
+                    <div className="absolute right-3 top-2.5">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-500 border-t-transparent"></div>
+                    </div>
+                  )}
                 </div>
-                {isScanning && (
-                  <div className="text-xs text-amber-600 mt-1 flex items-center">
-                    <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
-                    {t('status.scanning')}
-                  </div>
-                )}
-                {formData.barcode && !isScanning && (
-                  <div className="text-xs text-green-600 mt-1 flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    {t('status.barcodeReady')}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.weightGrams')}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.weight || ''}
-                  onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.purity')}
-                </label>
-                <select
-                  value={formData.purity}
-                  onChange={(e) => setFormData({ ...formData, purity: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                <button
+                  type="button"
+                  onClick={handleScanClick}
+                  disabled={isScanning}
+                  className={`px-3 py-2 rounded-lg transition-colors ${isScanning ? 'bg-amber-100 text-amber-600 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  title="Click to focus barcode scanner"
                 >
-                  <option value="24K">24K</option>
-                  <option value="22K">22K</option>
-                  <option value="18K">18K</option>
-                  <option value="14K">14K</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.currentRate')}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.current_rate || ''}
-                  onChange={(e) => setFormData({ ...formData, current_rate: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.makingCharge')}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.making_charge || ''}
-                  onChange={(e) => setFormData({ ...formData, making_charge: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.stockQuantity')}
-                </label>
-                <input
-                  type="number"
-                  value={formData.stock_quantity || ''}
-                  onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.minStockLevel')}
-                </label>
-                <input
-                  type="number"
-                  value={formData.min_stock_level || ''}
-                  onChange={(e) => setFormData({ ...formData, min_stock_level: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('inventory.status')}
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  <Scan className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={generateBarcode}
+                  disabled={isScanning || !formData.name.trim()}
+                  className={`px-3 py-2 rounded-lg transition-colors ${isScanning || !formData.name.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  title="Generate barcode based on product name"
                 >
-                  <option value="active">{t('active')}</option>
-                  <option value="inactive">{t('inactive')}</option>
-                </select>
+                  <Package className="h-4 w-4" />
+                </button>
               </div>
+              {isScanning && (
+                <div className="text-xs text-amber-600 mt-1 flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
+                  Scanning barcode...
+                </div>
+              )}
+              {formData.barcode && !isScanning && (
+                <div className="text-xs text-green-600 mt-1 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  Barcode ready
+                </div>
+              )}
             </div>
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="flex-1 bg-amber-500 text-white py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors"
-              >
-                {t('inventory.addProduct')}
-              </button>
-              <button
-                type="button"
-                onClick={onCancel}
-                className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                {t('inventory.cancel')}
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Weight (grams) *</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.weight || ''}
+                onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                required
+              />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Purity *</label>
+              <select
+                value={formData.purity}
+                onChange={(e) => setFormData({ ...formData, purity: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                <option value="24K">24K</option>
+                <option value="22K">22K</option>
+                <option value="18K">18K</option>
+                <option value="14K">14K</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current Rate (per gram) *</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.current_rate || ''}
+                onChange={(e) => setFormData({ ...formData, current_rate: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Making Charge</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.making_charge || ''}
+                onChange={(e) => setFormData({ ...formData, making_charge: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity *</label>
+              <input
+                type="number"
+                value={formData.stock_quantity || ''}
+                onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Stock Level *</label>
+              <input
+                type="number"
+                value={formData.min_stock_level || ''}
+                onChange={(e) => setFormData({ ...formData, min_stock_level: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 bg-amber-500 text-white py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors"
+            >
+              {product ? 'Update Product' : 'Add Product'}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 const Inventory: React.FC = () => {
   const { t } = useLanguage();
@@ -1214,7 +1030,7 @@ const Inventory: React.FC = () => {
       setProducts(productData);
     } catch (err: unknown) {
       console.error('Error loading products:', err);
-      error(t('error.loadProducts'));
+      error('Failed to load products. Please try again.');
     }
   };
 
@@ -1246,10 +1062,10 @@ const Inventory: React.FC = () => {
       const newProduct = await db.insert('products', productData);
       setProducts([...products, newProduct]);
       setShowAddModal(false);
-      success(t('success.productAdded'));
+      success('Product added successfully!');
     } catch (err: unknown) {
       console.error('Error adding product:', err);
-      error(t('error.addProduct'));
+      error('Failed to add product. Please try again.');
     }
   };
 
@@ -1260,11 +1076,11 @@ const Inventory: React.FC = () => {
       if (updatedProduct) {
         setProducts(products.map(p => p.id === id ? updatedProduct : p));
         setEditingProduct(null);
-        success(t('success.productUpdated'));
+        success('Product updated successfully!');
       }
     } catch (err: unknown) {
       console.error('Error updating product:', err);
-      error(t('error.updateProduct'));
+      error('Failed to update product. Please try again.');
     }
   };
 
@@ -1274,24 +1090,25 @@ const Inventory: React.FC = () => {
         const db = Database.getInstance();
         await db.delete('products', id);
         setProducts(products.filter(p => p.id !== id));
-        success(t('success.productDeleted'));
+        success('Product deleted successfully!');
       } catch (err: any) {
         console.error('Error deleting product:', err);
         if (err.response?.status === 400 && err.response?.data?.references) {
           const references = err.response.data.references;
-          const message = t('error.productReferenced', { bills: references.bills, invoices: references.invoices });
+          const message = `This product is referenced in ${references.bills} bill(s) and ${references.invoices} invoice(s). Do you want to delete it anyway? This will remove the product references from bills and invoices.`;
+
           if (window.confirm(message)) {
             try {
               await db.deleteWithCascade('products', id);
               setProducts(products.filter(p => p.id !== id));
-              success(t('success.productDeletedWithReferences'));
+              success('Product deleted successfully! References have been removed from bills and invoices.');
             } catch (cascadeErr: unknown) {
               console.error('Error in cascade delete:', cascadeErr);
-              error(t('error.deleteWithCascade'));
+              error('Failed to delete product even with cascade. Please try again.');
             }
           }
         } else {
-          error(t('error.deleteProduct'));
+          error('Failed to delete product. Please try again.');
         }
       }
     }
@@ -1316,7 +1133,7 @@ const Inventory: React.FC = () => {
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
-            title={t('button.addProduct')}
+            title="Add new product to inventory"
           >
             <Plus className="h-4 w-4" />
             <span>{t('inventory.addProduct')}</span>
@@ -1360,7 +1177,7 @@ const Inventory: React.FC = () => {
               >
                 {productCategories.map(category => (
                   <option key={category} value={category}>
-                    {category === 'all' ? t('common.allGenderAge') : t(`inventory.${category.toLowerCase()}`)}
+                    {category === 'all' ? 'All Gender/Age' : category}
                   </option>
                 ))}
               </select>
@@ -1376,10 +1193,10 @@ const Inventory: React.FC = () => {
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.product')}</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.skuBarcode')}</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.genderAgeCategory')}</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.weightGrams')}</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.stockQuantity')}</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('inventory.status')}</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Gender/Age</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.weight')}</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">Stock</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.status')}</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">{t('common.actions')}</th>
               </tr>
             </thead>
@@ -1414,13 +1231,13 @@ const Inventory: React.FC = () => {
                       <User className="h-4 w-4 text-[#F59E0B]" />
                       {product.product_category ? (
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${product.product_category === 'Men' ? 'bg-blue-100 text-blue-800' :
-                          product.product_category === 'Women' ? 'bg-pink-100 text-pink-800' :
-                          'bg-green-100 text-green-800'
+                            product.product_category === 'Women' ? 'bg-pink-100 text-pink-800' :
+                              'bg-green-100 text-green-800'
                           }`}>
-                          {t(`inventory.${product.product_category.toLowerCase()}`)}
+                          {product.product_category}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">{t('common.notSet')}</span>
+                        <span className="text-xs text-gray-400">Not set</span>
                       )}
                     </div>
                   </td>
@@ -1441,7 +1258,7 @@ const Inventory: React.FC = () => {
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
-                      {t(`status.${product.status}`)}
+                      {product.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -1449,21 +1266,21 @@ const Inventory: React.FC = () => {
                       <button
                         onClick={() => setEditingProduct(product)}
                         className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"
-                        title={t('button.editProduct')}
+                        title="Edit product"
                       >
                         <CreditCard className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteProduct(product.id)}
                         className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                        title={t('button.deleteProduct')}
+                        title="Delete product"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setViewingProduct(product)}
                         className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                        title={t('button.viewDetails')}
+                        title="View product details"
                       >
                         <Info className="h-4 w-4" />
                       </button>
@@ -1497,166 +1314,191 @@ const Inventory: React.FC = () => {
         />
       )}
 
-      {viewingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
-              <div className="flex flex-col gap-2">
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center flex-wrap">
-                  <Package className="h-6 w-6 text-gray-600 mr-2" />
-                  {viewingProduct.name}
-                </h2>
-                <div className="flex flex-wrap gap-2 sm:gap-4">
-                  <span className="font-mono text-sm sm:text-base text-gray-800 px-3 py-1 rounded-md border border-gray-300 flex items-center">
-                    <Hash className="inline h-4 w-4 mr-2 text-gray-500" />
-                    {t('inventory.sku')}: {viewingProduct.sku}
-                  </span>
-                  {viewingProduct.barcode && (
-                    <span className="font-mono text-sm sm:text-base text-gray-800 px-3 py-1 rounded-md border border-gray-300 flex items-center">
-                      <Barcode className="inline h-4 w-4 mr-2 text-gray-500" />
-                      {t('inventory.barcode')}: {viewingProduct.barcode}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setViewingProduct(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100"
-                title={t('button.close')}
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+    {viewingProduct && (
+  <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] flex flex-col">
+      {/* Header Section */}
+      <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div className="flex flex-col">
+          <h2 className="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+            <Package className="h-6 w-6 mr-2" />
+            {viewingProduct.name}
+          </h2>
+          <div className="mt-2 flex flex-col space-y-2">
+            <span className="font-mono text-base font-semibold px-3 py-1 rounded-md flex items-center border border-gray-200">
+              <Hash className="inline h-4 w-4 mr-2" />
+              SKU: {viewingProduct.sku}
+            </span>
+            {viewingProduct.barcode && (
+              <span className="font-mono text-base font-semibold px-3 py-1 rounded-md flex items-center border border-gray-200">
+                <Barcode className="inline h-4 w-4 mr-2" />
+                Barcode: {viewingProduct.barcode}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setViewingProduct(null)}
+          className="text-gray-400 hover:text-gray-600 transition p-2 rounded-full hover:bg-gray-100"
+          title="Close"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Content Section */}
+      <div className="p-6 space-y-8 overflow-y-auto flex-grow">
+        {/* Classification & Purity */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Classification & Purity</h3>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <User className="h-4 w-4" />
+                Category
+              </label>
+              <p className="text-base font-medium text-gray-900">{viewingProduct.category}</p>
             </div>
-            <div className="p-4 sm:p-6 space-y-8 overflow-y-auto flex-grow">
-              <section>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('Classification')}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <User className="h-4 w-4 text-gray-500" />
-                      {t('inventory.category')}
-                    </label>
-                    <p className="text-base font-semibold text-gray-900 break-words">{viewingProduct.category}</p>
-                  </div>
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <Sparkles className="h-4 w-4 text-gray-500" />
-                      {t('inventory.purity')}
-                    </label>
-                    <p className="text-base font-semibold text-gray-900">{viewingProduct.purity}</p>
-                  </div>
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <User className="h-4 w-4 text-gray-500" />
-                      {t('inventory.genderAgeCategory')}
-                    </label>
-                    <p className="text-sm sm:text-base text-gray-800 font-medium">
-                      {viewingProduct.product_category ? t(`inventory.${viewingProduct.product_category.toLowerCase()}`) : t('common.notSet')}
-                    </p>
-                  </div>
-                </div>
-              </section>
-              <section>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('Financials')}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="p-3 sm:p-3 border rounded-lg">
-                    <label className="text-sm font-medium text-gray-500 mb-1 flex items-center gap-1">
-                      <IndianRupee className="h-5 w-4 text-gray-500" />
-                      {t('inventory.currentRate')}
-                    </label>
-                    <p className="text-2xl sm:text-2xl font-bold text-gray-900">{viewingProduct.current_rate}</p>
-                  </div>
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-sm font-medium text-gray-500 mb-1 flex items-center gap-1">
-                      <Wrench className="h-4 w-4 text-gray-500" />
-                      {t('inventory.makingCharge')}
-                    </label>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{viewingProduct.making_charge || 0}%</p>
-                  </div>
-                </div>
-              </section>
-              <section>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('Update')}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <Scale className="h-4 w-4 text-gray-500" />
-                      {t('common.unitWeight')}
-                    </label>
-                    <p className="text-base font-semibold text-gray-900">{viewingProduct.weight}g</p>
-                  </div>
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <Package className="h-4 w-4 text-gray-500" />
-                      {t('inventory.stockQuantity')}
-                    </label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-base font-semibold text-gray-900">{viewingProduct.stock_quantity}</p>
-                      {viewingProduct.stock_quantity <= viewingProduct.min_stock_level && (
-                        <span className="text-xs font-semibold text-red-600">{t('status.lowStock')}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <Gauge className="h-4 w-4 text-gray-500" />
-                      {t('inventory.minStockLevel')}
-                    </label>
-                    <p className="text-base font-semibold text-gray-900">{viewingProduct.min_stock_level}</p>
-                  </div>
-                </div>
-              </section>
-              <section>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">{t('History')}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      {t('created')}
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {new Date(viewingProduct.created_at).toLocaleDateString()} at{' '}
-                      <span className="font-mono">{new Date(viewingProduct.created_at).toLocaleTimeString()}</span>
-                    </p>
-                  </div>
-                  <div className="p-3 sm:p-4 border rounded-lg">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500 uppercase mb-1 flex items-center gap-1">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      {t('lastModified')}
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {new Date(viewingProduct.updated_at).toLocaleDateString()} at{' '}
-                      <span className="font-mono">{new Date(viewingProduct.updated_at).toLocaleTimeString()}</span>
-                    </p>
-                  </div>
-                </div>
-              </section>
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <Sparkles className="h-4 w-4" />
+                Purity
+              </label>
+              <p className="text-base font-medium text-gray-900">{viewingProduct.purity}</p>
             </div>
-            <div className="p-4 sm:p-6 border-t border-gray-200 sticky bottom-0 bg-white z-10">
-              <div className="flex flex-col sm:flex-row justify-end gap-3">
-                <button
-                  onClick={() => setViewingProduct(null)}
-                  className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium w-full sm:w-auto"
-                >
-                  {t('button.close')}
-                </button>
-                <button
-                  onClick={() => {
-                    setViewingProduct(null);
-                    setEditingProduct(viewingProduct);
-                  }}
-                  className="flex items-center justify-center bg-amber-500 text-white px-5 py-2 rounded-lg transition-colors font-medium shadow-sm w-full sm:w-auto"
-                >
-                  <Wrench className="h-5 w-5 mr-2" />
-                  {t('button.editProductDetails')}
-                </button>
-              </div>
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <User className="h-4 w-4" />
+                Target Group
+              </label>
+              {viewingProduct.product_category ? (
+                <span className="px-2.5 py-0.5 text-sm font-medium rounded border border-gray-200">
+                  {viewingProduct.product_category}
+                </span>
+              ) : (
+                <span className="text-sm text-gray-400">Not Specified</span>
+              )}
             </div>
           </div>
         </div>
-      )}
+
+        <hr className="border-gray-100" />
+
+        {/* Financials */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Financials</h3>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="block text-sm font-medium text-gray-500 mb-1 flex items-center space-x-1">
+                <IndianRupee className="h-5 w-5" />
+                Current Rate (per gram)
+              </label>
+              <p className="text-3xl font-bold text-gray-900">₹{viewingProduct.current_rate}</p>
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="block text-sm font-medium text-gray-500 mb-1 flex items-center space-x-1">
+                <Wrench className="h-4 w-4" />
+                Making Charge
+              </label>
+              <p className="text-2xl font-bold text-gray-900">₹{viewingProduct.making_charge || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-gray-100" />
+
+        {/* Inventory Status */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Inventory Status</h3>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <Scale className="h-4 w-4" />
+                Unit Weight
+              </label>
+              <p className="text-base font-medium text-gray-900">{viewingProduct.weight}g</p>
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <Package className="h-4 w-4" />
+                Current Stock
+              </label>
+              <div className="flex items-center space-x-2">
+                <p className="text-base font-medium text-gray-900">{viewingProduct.stock_quantity}</p>
+                {viewingProduct.stock_quantity <= viewingProduct.min_stock_level && (
+                  <span className="flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border border-gray-200">
+                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    Low
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <Gauge className="h-4 w-4" />
+                Minimum Level
+              </label>
+              <p className="text-base font-medium text-gray-900">{viewingProduct.min_stock_level}</p>
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-gray-100" />
+
+        {/* Audit History */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Audit History</h3>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <Clock className="h-4 w-4" />
+                Record Created
+              </label>
+              <p className="text-sm text-gray-900">
+                {new Date(viewingProduct.created_at).toLocaleDateString()} at{' '}
+                <span className="font-mono">{new Date(viewingProduct.created_at).toLocaleTimeString()}</span>
+              </p>
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1 flex items-center space-x-1">
+                <Clock className="h-4 w-4" />
+                Last Modified
+              </label>
+              <p className="text-sm text-gray-900">
+                {new Date(viewingProduct.updated_at).toLocaleDateString()} at{' '}
+                <span className="font-mono">{new Date(viewingProduct.updated_at).toLocaleTimeString()}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Section */}
+      <div className="p-6 border-t border-gray-200 sticky bottom-0 bg-white z-10">
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={() => setViewingProduct(null)}
+            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+          >
+            Close
+          </button>
+          <button
+            onClick={() => {
+              setViewingProduct(null);
+              setEditingProduct(viewingProduct);
+            }}
+            className="flex items-center px-6 py-2 border bg-amber-500 border-gray-300 text-white rounded-lg hover:bg-gray-50 transition font-medium shadow-md"
+          >
+            <Wrench className="h-5 w-5 mr-2 " />
+            Edit Product Details
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
