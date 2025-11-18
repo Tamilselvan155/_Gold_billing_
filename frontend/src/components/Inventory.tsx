@@ -41,6 +41,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState<boolean>(false);
   const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    sku?: string;
+    weight?: string;
+    stock_quantity?: string;
+    min_stock_level?: string;
+    barcode?: string;
+  }>({});
 
   const validateBarcode = (barcode: string): boolean => {
     if (!barcode || barcode.length < 3) return false;
@@ -126,7 +134,66 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
     };
   }, []);
 
+  const validateForm = (): boolean => {
+    const errors: {
+      name?: string;
+      sku?: string;
+      weight?: string;
+      stock_quantity?: string;
+      min_stock_level?: string;
+      barcode?: string;
+    } = {};
+
+    // Name validation
+    if (!formData.name.trim()) {
+      errors.name = t('inventory.productNameRequired');
+    } else if (formData.name.trim().length < 2) {
+      errors.name = t('inventory.productNameMinLength');
+    }
+
+    // SKU validation
+    if (!formData.sku.trim()) {
+      errors.sku = t('inventory.skuRequired');
+    } else if (formData.sku.trim().length < 2) {
+      errors.sku = t('inventory.skuMinLength');
+    }
+
+    // Weight validation
+    if (!formData.weight || formData.weight <= 0) {
+      errors.weight = t('inventory.weightRequired');
+    } else if (formData.weight > 10000) {
+      errors.weight = t('inventory.weightMaxValue');
+    }
+
+    // Stock quantity validation
+    if (formData.stock_quantity === undefined || formData.stock_quantity < 0) {
+      errors.stock_quantity = t('inventory.stockQuantityRequired');
+    } else if (formData.stock_quantity > 1000000) {
+      errors.stock_quantity = t('inventory.stockQuantityMaxValue');
+    }
+
+    // Min stock level validation
+    if (formData.min_stock_level === undefined || formData.min_stock_level < 0) {
+      errors.min_stock_level = t('inventory.minStockLevelRequired');
+    } else if (formData.min_stock_level > 100000) {
+      errors.min_stock_level = t('inventory.minStockLevelMaxValue');
+    }
+
+    // Barcode validation (optional but must be valid if provided)
+    if (formData.barcode && formData.barcode.trim()) {
+      if (!validateBarcode(formData.barcode.trim())) {
+        errors.barcode = t('inventory.barcodeInvalid');
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = () => {
+    if (!validateForm()) {
+      return;
+    }
     onSubmit(formData);
   };
 
@@ -178,10 +245,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (formErrors.name) {
+                    setFormErrors({ ...formErrors, name: undefined });
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                  formErrors.name ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
+              {formErrors.name && (
+                <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -236,10 +313,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
               <input
                 type="text"
                 value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                onChange={(e) => {
+                  setFormData({ ...formData, sku: e.target.value });
+                  if (formErrors.sku) {
+                    setFormErrors({ ...formErrors, sku: undefined });
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                  formErrors.sku ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
+              {formErrors.sku && (
+                <p className="mt-1 text-xs text-red-600">{formErrors.sku}</p>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -255,7 +342,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
                     onChange={(e) => handleBarcodeInput(e.target.value)}
                     onKeyDown={handleBarcodeKeyDown}
                     placeholder={t('inventory.barcodePlaceholder')}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-monowarden-blockquotesono text-sm"
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-monowarden-blockquotesono text-sm ${
+                      formErrors.barcode ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     disabled={isScanning}
                     title={t('inventory.barcodeInputTitle')}
                   />
@@ -286,13 +375,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
                   <Package className="h-4 w-4" />
                 </button>
               </div>
-              {isScanning && (
+              {formErrors.barcode && (
+                <p className="mt-1 text-xs text-red-600">{formErrors.barcode}</p>
+              )}
+              {isScanning && !formErrors.barcode && (
                 <div className="text-xs text-amber-600 mt-1 flex items-center">
                   <div className="animate-spin rounded-full h-3 w-3 border border-amber-500 border-t-transparent mr-2"></div>
                   {t('inventory.barcodeScanning')}
                 </div>
               )}
-              {formData.barcode && !isScanning && (
+              {formData.barcode && !isScanning && !formErrors.barcode && (
                 <div className="text-xs text-green-600 mt-1 flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                   {t('inventory.barcodeReady')}
@@ -304,12 +396,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
               <input
                 type="number"
                 step="0.01"
+                min="0.01"
+                max="10000"
                 value={formData.weight || ''}
-                onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value) || 0;
+                  setFormData({ ...formData, weight: value });
+                  if (formErrors.weight) {
+                    setFormErrors({ ...formErrors, weight: undefined });
+                  }
+                }}
                 onWheel={handleWheel}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                  formErrors.weight ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
+              {formErrors.weight && (
+                <p className="mt-1 text-xs text-red-600">{formErrors.weight}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.materialType')} *</label>
@@ -348,23 +453,49 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSubmit, onCancel, 
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stockQuantity')} *</label>
               <input
                 type="number"
+                min="0"
+                max="1000000"
                 value={formData.stock_quantity || ''}
-                onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setFormData({ ...formData, stock_quantity: value });
+                  if (formErrors.stock_quantity) {
+                    setFormErrors({ ...formErrors, stock_quantity: undefined });
+                  }
+                }}
                 onWheel={handleWheel}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                  formErrors.stock_quantity ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
+              {formErrors.stock_quantity && (
+                <p className="mt-1 text-xs text-red-600">{formErrors.stock_quantity}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.minStockLevel')} *</label>
               <input
                 type="number"
+                min="0"
+                max="100000"
                 value={formData.min_stock_level || ''}
-                onChange={(e) => setFormData({ ...formData, min_stock_level: parseInt(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setFormData({ ...formData, min_stock_level: value });
+                  if (formErrors.min_stock_level) {
+                    setFormErrors({ ...formErrors, min_stock_level: undefined });
+                  }
+                }}
                 onWheel={handleWheel}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                  formErrors.min_stock_level ? 'border-red-500' : 'border-gray-300'
+                }`}
                 required
               />
+              {formErrors.min_stock_level && (
+                <p className="mt-1 text-xs text-red-600">{formErrors.min_stock_level}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.status')} *</label>

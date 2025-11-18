@@ -1,4 +1,4 @@
--- Gold Billing System Database Schema
+-- Vannamiyal Thangamaligai Database Schema
 -- SQLite Database for offline gold jewelry billing system
 
 -- Products table

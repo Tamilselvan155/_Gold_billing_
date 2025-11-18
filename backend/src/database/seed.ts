@@ -147,7 +147,7 @@ const seedDatabase = async () => {
         `);
         
         const settings = [
-          ['company_name', 'Gold Billing System', 'Company name for invoices'],
+          ['company_name', 'Vannamiyal Thangamaligai', 'Company name for invoices'],
           ['company_address', '123 Business Street, City, State - 123456', 'Company address for invoices'],
           ['company_phone', '+91 9876543210', 'Company phone number'],
           ['company_email', 'info@goldbilling.com', 'Company email address'],

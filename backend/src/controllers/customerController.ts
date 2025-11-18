@@ -165,24 +165,63 @@ export const deleteCustomer = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const stmt = Database.prepare('DELETE FROM customers WHERE id = ?');
-    const result = stmt.run(id);
+    // Check if customer exists
+    const checkCustomer = Database.prepare('SELECT * FROM customers WHERE id = ?');
+    const customer = checkCustomer.get(id);
     
-    if (result.changes === 0) {
+    if (!customer) {
       return res.status(404).json({
         success: false,
         error: 'Customer not found'
       });
     }
     
+    // Check if customer has invoices (invoices have NOT NULL customer_id constraint)
+    const checkInvoices = Database.prepare('SELECT COUNT(*) as count FROM invoices WHERE customer_id = ?');
+    const invoiceCount = checkInvoices.get(id) as { count: number };
+    
+    if (invoiceCount.count > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot delete customer. This customer has ${invoiceCount.count} invoice(s) associated. Please delete or reassign the invoices first.`
+      });
+    }
+    
+    // Check if customer has bills (bills can have NULL customer_id, so we can delete)
+    // But we'll still inform the user
+    const checkBills = Database.prepare('SELECT COUNT(*) as count FROM bills WHERE customer_id = ?');
+    const billCount = checkBills.get(id) as { count: number };
+    
+    // Use transaction to delete customer
+    const transaction = Database.getDatabase().transaction(() => {
+      // Delete customer (bills will have customer_id set to NULL due to ON DELETE SET NULL)
+      const stmt = Database.prepare('DELETE FROM customers WHERE id = ?');
+      const result = stmt.run(id);
+      return result.changes;
+    });
+    
+    const changes = transaction();
+    
+    if (changes === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Customer not found'
+      });
+    }
+    
+    const message = billCount.count > 0 
+      ? `Customer deleted successfully. ${billCount.count} bill(s) associated with this customer have been updated.`
+      : 'Customer deleted successfully';
+    
     res.json({
       success: true,
-      message: 'Customer deleted successfully'
+      message: message
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Error deleting customer:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to delete customer'
+      error: error.message || 'Failed to delete customer'
     });
   }
 };

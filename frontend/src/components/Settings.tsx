@@ -934,6 +934,16 @@ const Settings: React.FC = () => {
                 continue;
               }
 
+              // Log dates for debugging (first invoice only)
+              if (i === 0) {
+                console.log('First invoice being imported:', {
+                  invoice_number: invoiceData.invoice_number,
+                  created_at: invoiceData.created_at,
+                  updated_at: invoiceData.updated_at,
+                  created_at_type: typeof invoiceData.created_at
+                });
+              }
+              
               await db.insert('invoices', invoiceData);
             importedCount++;
               setImportProgress(90 + (i / cleanedData.invoices.length) * 5);
@@ -999,7 +1009,9 @@ const Settings: React.FC = () => {
                 payment_method: billData.payment_method,
                 payment_status: billData.payment_status || 'pending',
                 amount_paid: billData.amount_paid || 0,
-                notes: billData.notes || ''
+                notes: billData.notes || '',
+                created_at: billData.created_at,
+                updated_at: billData.updated_at
               };
 
               // Final validation to avoid 400 from backend
@@ -1017,6 +1029,16 @@ const Settings: React.FC = () => {
                 continue;
               }
 
+              // Log dates for debugging (first bill only)
+              if (i === 0) {
+                console.log('First bill being imported:', {
+                  bill_number: billPayload.invoice_number,
+                  created_at: billPayload.created_at,
+                  updated_at: billPayload.updated_at,
+                  created_at_type: typeof billPayload.created_at
+                });
+              }
+              
               await db.insert('bills', billPayload);
             importedCount++;
             } catch (err: any) {
@@ -1263,7 +1285,9 @@ const Settings: React.FC = () => {
                 payment_method: billData.payment_method,
                 payment_status: billData.payment_status || 'pending',
                 amount_paid: billData.amount_paid || 0,
-                notes: billData.notes || ''
+                notes: billData.notes || '',
+                created_at: billData.created_at,
+                updated_at: billData.updated_at
               };
 
               // Final validation to avoid 400 from backend
@@ -1363,7 +1387,9 @@ const Settings: React.FC = () => {
                 payment_method: billData.payment_method,
                 payment_status: billData.payment_status || 'pending',
                 amount_paid: billData.amount_paid || 0,
-                notes: billData.notes || ''
+                notes: billData.notes || '',
+                created_at: billData.created_at,
+                updated_at: billData.updated_at
               };
 
               // Final validation
@@ -1420,10 +1446,17 @@ const Settings: React.FC = () => {
   // Helper to safely parse dates coming from Excel/JSON into ISO strings
   const parseExcelDate = (value: any, fallback?: string): string => {
     if (!value && fallback) return fallback;
-    if (!value) return new Date().toISOString();
+    if (!value) {
+      console.warn('parseExcelDate: No value provided, using current date');
+      return new Date().toISOString();
+    }
 
     // If already a Date
     if (value instanceof Date) {
+      if (isNaN(value.getTime())) {
+        console.warn('parseExcelDate: Invalid Date object, using fallback');
+        return fallback || new Date().toISOString();
+      }
       return value.toISOString();
     }
 
@@ -1440,12 +1473,16 @@ const Settings: React.FC = () => {
 
     if (typeof value === 'string') {
       const trimmed = value.trim();
-      if (!trimmed) return fallback || new Date().toISOString();
+      if (!trimmed) {
+        console.warn('parseExcelDate: Empty string, using fallback');
+        return fallback || new Date().toISOString();
+      }
 
       // Try native Date parsing first
       const parsed = Date.parse(trimmed);
       if (!isNaN(parsed)) {
-        return new Date(parsed).toISOString();
+        const result = new Date(parsed).toISOString();
+        return result;
       }
 
       // Try to parse common en-IN format: DD/MM/YYYY, HH:MM:SS am/pm
@@ -1470,11 +1507,16 @@ const Settings: React.FC = () => {
         const date = new Date(year, month, day, hours, minutes, seconds);
         if (!isNaN(date.getTime())) {
           return date.toISOString();
+        } else {
+          console.warn('parseExcelDate: Failed to create date from match:', { dStr, mStr, yStr, hStr, minStr, sStr, ampm });
         }
+      } else {
+        console.warn('parseExcelDate: Could not parse date string:', trimmed);
       }
     }
 
     // Fallback
+    console.warn('parseExcelDate: Using fallback for value:', value);
     return fallback || new Date().toISOString();
   };
 
@@ -1649,6 +1691,9 @@ const Settings: React.FC = () => {
     // Handle Exchange Bills (separate from regular bills)
     if (data.exchangeBills && Array.isArray(data.exchangeBills)) {
       cleaned.exchangeBills = data.exchangeBills.map((bill: any) => {
+        const rawCreatedAt = bill['Created At'] || bill.created_at;
+        const rawUpdatedAt = bill['Updated At'] || bill.updated_at || rawCreatedAt;
+        
         const mappedBill = {
           id: bill.ID || bill.id || generateId(),
           bill_number: bill['Exchange Bill Number'] || bill.bill_number || `EXCH-${generateBillNumber()}`,
@@ -1670,8 +1715,8 @@ const Settings: React.FC = () => {
           payment_status: (bill['Payment Status'] || bill.payment_status || 'pending').toLowerCase(),
           amount_paid: parseFloat(bill['Amount Paid (₹)'] || bill.amount_paid || 0) || 0,
           items: bill.items || [],
-          created_at: bill['Created At'] || bill.created_at || new Date().toISOString(),
-          updated_at: bill['Updated At'] || bill.updated_at || new Date().toISOString()
+          created_at: parseExcelDate(rawCreatedAt),
+          updated_at: parseExcelDate(rawUpdatedAt, parseExcelDate(rawCreatedAt))
         };
         
         // Ensure bill_number starts with EXCH-
@@ -2603,6 +2648,16 @@ const Settings: React.FC = () => {
               invoiceData.items = [];
             }
             
+            // Log dates for debugging (first invoice only)
+            if (successCount === 0 && cleanedData.invoices.length > 0) {
+              console.log('First invoice being restored:', {
+                invoice_number: invoiceData.invoice_number,
+                created_at: invoiceData.created_at,
+                updated_at: invoiceData.updated_at,
+                created_at_type: typeof invoiceData.created_at
+              });
+            }
+            
             await db.insert('invoices', invoiceData);
             successCount++;
           } catch (err: any) {
@@ -2668,7 +2723,9 @@ const Settings: React.FC = () => {
               payment_method: billData.payment_method,
               payment_status: billData.payment_status || 'pending',
               amount_paid: billData.amount_paid || 0,
-              notes: billData.notes || ''
+              notes: billData.notes || '',
+              created_at: billData.created_at,
+              updated_at: billData.updated_at
             };
 
             // Final validation for bills
@@ -2684,6 +2741,16 @@ const Settings: React.FC = () => {
               );
               console.error('Bill missing required fields:', billPayload);
               continue;
+            }
+            
+            // Log dates for debugging (first bill only)
+            if (successCount === 0 && cleanedData.bills && cleanedData.bills.length > 0) {
+              console.log('First bill being restored:', {
+                bill_number: billPayload.invoice_number,
+                created_at: billPayload.created_at,
+                updated_at: billPayload.updated_at,
+                created_at_type: typeof billPayload.created_at
+              });
             }
             
             await db.insert('bills', billPayload);

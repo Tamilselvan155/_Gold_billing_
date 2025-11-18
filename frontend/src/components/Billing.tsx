@@ -46,6 +46,9 @@ const Billing: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerModalInitialView, setCustomerModalInitialView] = useState<'list' | 'add'>('list');
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [recentBills, setRecentBills] = useState<Bill[]>([]);
   const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([]);
   const [exchangeBills, setExchangeBills] = useState<Bill[]>([]);
@@ -75,6 +78,30 @@ const Billing: React.FC = () => {
     difference: 0,
     exchangeItems: [] as InvoiceItem[],
   });
+
+  // Form validation errors
+  const [billFormErrors, setBillFormErrors] = useState<{
+    tax_percentage?: string;
+    discount_amount?: string;
+    amount_paid?: string;
+    payment_method?: string;
+  }>({});
+
+  const [itemErrors, setItemErrors] = useState<{
+    [itemId: string]: {
+      weight?: string;
+      rate?: string;
+      making_charge?: string;
+      wastage_charge?: string;
+      quantity?: string;
+    };
+  }>({});
+
+  const [exchangeFormErrors, setExchangeFormErrors] = useState<{
+    oldMaterialWeight?: string;
+    oldMaterialRate?: string;
+    exchangeRate?: string;
+  }>({});
 
   // Memoized functions - declared before useEffect hooks
   const loadData = useCallback(async () => {
@@ -484,6 +511,23 @@ const Billing: React.FC = () => {
     };
   }, []);
 
+  // Close customer dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.customer-filter-container')) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showCustomerDropdown]);
+
   const saveBill = async () => {
     if (!currentBill.items?.length) {
       error(t('billing.addAtLeastOneItem'));
@@ -801,17 +845,64 @@ const Billing: React.FC = () => {
   const CustomerModal: React.FC<{
     onClose: () => void;
     onSelect: (customer: Customer) => void;
-  }> = ({ onClose, onSelect }) => {
+    initialView?: 'list' | 'add';
+  }> = ({ onClose, onSelect, initialView = 'list' }) => {
     const [newCustomer, setNewCustomer] = useState({
       name: '',
       phone: '',
       email: '',
       address: '',
     });
+    const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+    const [showAddForm, setShowAddForm] = useState(initialView === 'add');
+    const [customerErrors, setCustomerErrors] = useState<{
+      name?: string;
+      phone?: string;
+      email?: string;
+    }>({});
+
+    // Update view when initialView prop changes
+    useEffect(() => {
+      setShowAddForm(initialView === 'add');
+    }, [initialView]);
+
+    // Validate customer form
+    const validateCustomer = (): boolean => {
+      const errors: { name?: string; phone?: string; email?: string } = {};
+      
+      // Name validation
+      if (!newCustomer.name.trim()) {
+        errors.name = t('billing.nameRequired');
+      } else if (newCustomer.name.trim().length < 2) {
+        errors.name = t('billing.nameMinLength');
+      }
+      
+      // Phone validation
+      if (!newCustomer.phone.trim()) {
+        errors.phone = t('billing.phoneRequired');
+      } else {
+        const phoneRegex = /^[0-9]{10}$/;
+        const cleanedPhone = newCustomer.phone.replace(/[\s\-\(\)]/g, '');
+        if (!phoneRegex.test(cleanedPhone) || cleanedPhone.length !== 10) {
+          errors.phone = t('billing.phoneInvalid');
+        }
+      }
+      
+      // Email validation (optional but must be valid if provided)
+      if (newCustomer.email.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newCustomer.email.trim())) {
+          errors.email = t('billing.emailInvalid');
+        }
+      }
+      
+      setCustomerErrors(errors);
+      return Object.keys(errors).length === 0;
+    };
 
     const handleAddCustomer = async () => {
-      if (!newCustomer.name || !newCustomer.phone) {
-        error(t('billing.nameAndPhoneRequired'));
+      if (!validateCustomer()) {
         return;
       }
 
@@ -819,6 +910,10 @@ const Billing: React.FC = () => {
         const db = Database.getInstance();
         const customerData = await db.createCustomer(newCustomer);
         setCustomers([...customers, customerData]);
+        // Reset form and errors
+        setNewCustomer({ name: '', phone: '', email: '', address: '' });
+        setCustomerErrors({});
+        // Select the new customer and close modal
         onSelect(customerData);
         onClose();
         success(t('billing.customerCreatedSuccess'));
@@ -828,12 +923,56 @@ const Billing: React.FC = () => {
       }
     };
 
+    // Filter customers based on search term
+    const filteredCustomers = useMemo(() => {
+      if (!customerSearchTerm.trim()) return customers;
+      const searchLower = customerSearchTerm.toLowerCase().trim();
+      return customers.filter(customer =>
+        customer.name?.toLowerCase().includes(searchLower) ||
+        customer.phone?.toLowerCase().includes(searchLower) ||
+        customer.email?.toLowerCase().includes(searchLower)
+      );
+    }, [customers, customerSearchTerm]);
+
+    const handleDeleteCustomer = async () => {
+      if (!customerToDelete) return;
+
+      try {
+        const db = Database.getInstance();
+        await db.deleteCustomer(customerToDelete.id);
+        
+        // Remove from customers list
+        setCustomers(customers.filter(c => c.id !== customerToDelete.id));
+        
+        // If deleted customer was selected, clear selection
+        if (selectedCustomer?.id === customerToDelete.id) {
+          setSelectedCustomer(null);
+          setCurrentBill(prev => ({
+            ...prev,
+            customer_name: '',
+            customer_phone: ''
+          }));
+        }
+        
+        setCustomerToDelete(null);
+        success('Customer deleted successfully!');
+      } catch (err: any) {
+        console.error('Error deleting customer:', err);
+        // Extract error message from backend response
+        const errorMessage = err?.response?.data?.error || err?.message || 'Failed to delete customer. Please try again.';
+        error(errorMessage);
+      }
+    };
+
     return (
+      <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6 border-b border-gray-300">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">{t('billing.selectCustomer')}</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {showAddForm ? t('billing.addNewCustomer') : t('billing.selectCustomer')}
+              </h2>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
                 <X className="h-5 w-5" />
               </button>
@@ -841,38 +980,102 @@ const Billing: React.FC = () => {
           </div>
           
           <div className="p-6 space-y-6">
-            {/* Add New Customer */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">{t('billing.addNewCustomer')}</h3>
+            {/* Navigation Tabs */}
+            <div className="flex space-x-2 border-b border-gray-200">
+              <button
+                onClick={() => setShowAddForm(false)}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  !showAddForm
+                    ? 'text-amber-600 border-b-2 border-amber-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {t('billing.existingCustomers')}
+              </button>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  showAddForm
+                    ? 'text-amber-600 border-b-2 border-amber-500'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {t('billing.addNewCustomer')}
+              </button>
+            </div>
+
+            {showAddForm ? (
+              /* Add New Customer Form */
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-4">{t('billing.addNewCustomer')}</h3>
               <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder={`${t('billing.fullName')} *`}
-                  value={newCustomer.name}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
-                <input
-                  type="tel"
-                  placeholder={`${t('billing.phoneNumber')} *`}
-                  value={newCustomer.phone}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
-                <input
-                  type="email"
-                  placeholder={t('billing.emailOptional')}
-                  value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
-                <input
-                  type="text"
-                  placeholder={t('billing.addressOptional')}
-                  value={newCustomer.address}
-                  onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
+                <div>
+                  <input
+                    type="text"
+                    placeholder={`${t('billing.fullName')} *`}
+                    value={newCustomer.name}
+                    onChange={(e) => {
+                      setNewCustomer({ ...newCustomer, name: e.target.value });
+                      if (customerErrors.name) {
+                        setCustomerErrors({ ...customerErrors, name: undefined });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                      customerErrors.name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {customerErrors.name && (
+                    <p className="mt-1 text-xs text-red-600">{customerErrors.name}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="tel"
+                    placeholder={`${t('billing.phoneNumber')} *`}
+                    value={newCustomer.phone}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
+                      setNewCustomer({ ...newCustomer, phone: value });
+                      if (customerErrors.phone) {
+                        setCustomerErrors({ ...customerErrors, phone: undefined });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                      customerErrors.phone ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {customerErrors.phone && (
+                    <p className="mt-1 text-xs text-red-600">{customerErrors.phone}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="email"
+                    placeholder={t('billing.emailOptional')}
+                    value={newCustomer.email}
+                    onChange={(e) => {
+                      setNewCustomer({ ...newCustomer, email: e.target.value });
+                      if (customerErrors.email) {
+                        setCustomerErrors({ ...customerErrors, email: undefined });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                      customerErrors.email ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {customerErrors.email && (
+                    <p className="mt-1 text-xs text-red-600">{customerErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    placeholder={t('billing.addressOptional')}
+                    value={newCustomer.address}
+                    onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
               </div>
               <button
                 onClick={handleAddCustomer}
@@ -881,34 +1084,119 @@ const Billing: React.FC = () => {
                 {t('billing.addCustomer')}
               </button>
             </div>
-
-            {/* Existing Customers */}
+            ) : (
+            /* Existing Customers */
             <div>
-              <h3 className="font-medium text-gray-900 mb-4">{t('billing.existingCustomers')}</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-gray-900">{t('billing.existingCustomers')}</h3>
+                <span className="text-sm text-gray-500">
+                  {filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'}
+                </span>
+              </div>
+              
+              {/* Customer Search Filter */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, phone, or email..."
+                    value={customerSearchTerm}
+                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                  {customerSearchTerm && (
+                    <button
+                      onClick={() => setCustomerSearchTerm('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {customers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    onClick={() => {
-                      onSelect(customer);
-                      onClose();
-                    }}
-                    className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">{customer.name}</p>
-                        <p className="text-sm text-gray-600">{customer.phone}</p>
+                {filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="p-3 border border-gray-200 rounded-lg hover:bg-amber-50 hover:border-amber-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div
+                          onClick={() => {
+                            onSelect(customer);
+                            onClose();
+                          }}
+                          className="flex-1 cursor-pointer"
+                        >
+                          <p className="font-medium text-gray-900">{customer.name}</p>
+                          <p className="text-sm text-gray-600">{customer.phone}</p>
+                          {customer.email && (
+                            <p className="text-xs text-gray-500">{customer.email}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Check className="h-5 w-5 text-amber-500" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCustomerToDelete(customer);
+                            }}
+                            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                            title="Delete customer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                      <Check className="h-5 w-5 text-amber-500" />
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">
+                      {customerSearchTerm ? 'No customers found matching your search' : 'No customers found'}
+                    </p>
                   </div>
-                ))}
+                )}
+              </div>
+            </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Customer Confirmation Modal */}
+      {customerToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-300">
+              <h3 className="text-lg font-bold text-gray-900">Delete Customer</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete <span className="font-semibold">{customerToDelete.name}</span>? This action cannot be undone.
+              </p>
+              <div className="flex space-x-3 justify-end">
+                <button
+                  onClick={() => setCustomerToDelete(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteCustomer}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+    </>
     );
   };
 
@@ -921,6 +1209,20 @@ const Billing: React.FC = () => {
       product.sku.toLowerCase().includes(lowerSearchTerm)
     );
   }, [products, searchTerm]);
+
+  // Filter customers based on search term in Customer Information section
+  const filteredCustomersList = useMemo(() => {
+    if (!customerFilter.trim()) {
+      // Show first 10 customers if no filter and dropdown is open
+      return showCustomerDropdown ? customers.slice(0, 10) : [];
+    }
+    const searchLower = customerFilter.toLowerCase().trim();
+    return customers.filter(customer =>
+      customer.name?.toLowerCase().includes(searchLower) ||
+      customer.phone?.toLowerCase().includes(searchLower) ||
+      customer.email?.toLowerCase().includes(searchLower)
+    ).slice(0, 10); // Limit to 10 results
+  }, [customers, customerFilter, showCustomerDropdown]);
 
   const generateBillPDF = (bill: Bill) => {
     try {
@@ -1983,13 +2285,28 @@ const Billing: React.FC = () => {
                 <User className="h-5 w-5 text-amber-500" />
                 <h2 className="text-lg font-semibold text-gray-900">{t('billing.customerInformation')}</h2>
               </div>
-              <button
-                onClick={() => setShowCustomerModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
-              >
-                <User className="h-4 w-4" />
-                <span>{t('billing.selectCustomer')}</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setCustomerModalInitialView('add');
+                    setShowCustomerModal(true);
+                  }}
+                  className="flex items-center space-x-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{t('billing.addCustomer')}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setCustomerModalInitialView('list');
+                    setShowCustomerModal(true);
+                  }}
+                  className="flex items-center space-x-2 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
+                >
+                  <User className="h-4 w-4" />
+                  <span>{t('billing.selectCustomer')}</span>
+                </button>
+              </div>
             </div>
             
             {selectedCustomer ? (
@@ -2002,28 +2319,84 @@ const Billing: React.FC = () => {
                   )}
                 </div>
                 <button
-                  onClick={() => setSelectedCustomer(null)}
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    setCustomerFilter('');
+                    setShowCustomerDropdown(false);
+                  }}
                   className="text-amber-600 hover:text-amber-700"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder={t('billing.customerName')}
-                  value={currentBill.customer_name || ''}
-                  onChange={(e) => setCurrentBill(prev => ({ ...prev, customer_name: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
-                <input
-                  type="tel"
-                  placeholder={t('billing.phoneNumber')}
-                  value={currentBill.customer_phone || ''}
-                  onChange={(e) => setCurrentBill(prev => ({ ...prev, customer_phone: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                />
+              <div className="space-y-4">
+                {/* Customer Filter/Search */}
+                <div className="relative customer-filter-container">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search customer by name, phone, or email..."
+                    value={customerFilter}
+                    onChange={(e) => {
+                      setCustomerFilter(e.target.value);
+                      if (e.target.value.trim().length > 0 || customers.length > 0) {
+                        setShowCustomerDropdown(true);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (customers.length > 0) {
+                        setShowCustomerDropdown(true);
+                      }
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                  {customerFilter && (
+                    <button
+                      onClick={() => {
+                        setCustomerFilter('');
+                        setShowCustomerDropdown(false);
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                  
+                  {/* Customer Dropdown List */}
+                  {showCustomerDropdown && filteredCustomersList.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {filteredCustomersList.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setCurrentBill(prev => ({
+                              ...prev,
+                              customer_name: customer.name,
+                              customer_phone: customer.phone || ''
+                            }));
+                            setCustomerFilter('');
+                            setShowCustomerDropdown(false);
+                          }}
+                          className="p-3 border-b border-gray-200 cursor-pointer hover:bg-amber-50 transition-colors last:border-b-0"
+                        >
+                          <p className="font-medium text-gray-900">{customer.name}</p>
+                          <p className="text-sm text-gray-600">{customer.phone}</p>
+                          {customer.email && (
+                            <p className="text-xs text-gray-500">{customer.email}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {showCustomerDropdown && customerFilter.trim().length > 0 && filteredCustomersList.length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4">
+                      <p className="text-sm text-gray-500 text-center">No customers found</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2066,21 +2439,37 @@ const Billing: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('billing.weightGrams')} *
                   </label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={exchangeMaterial.oldMaterialWeight || ''}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      if (!isNaN(value) && value >= 0) {
-                        setExchangeMaterial(prev => ({ ...prev, oldMaterialWeight: value }));
-                      }
-                    }}
-                    onWheel={handleWheel}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder={t('billing.enterWeightGrams')}
-                  />
+                  <div className="flex flex-col space-y-1">
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={exchangeMaterial.oldMaterialWeight || ''}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (!isNaN(value) && value >= 0) {
+                          setExchangeMaterial(prev => ({ ...prev, oldMaterialWeight: value }));
+                          if (exchangeFormErrors.oldMaterialWeight) {
+                            setExchangeFormErrors(prev => ({ ...prev, oldMaterialWeight: undefined }));
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (e.target.value === '' || isNaN(value) || value <= 0) {
+                          setExchangeFormErrors(prev => ({ ...prev, oldMaterialWeight: t('billing.weightRequired') }));
+                        }
+                      }}
+                      onWheel={handleWheel}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                        exchangeFormErrors.oldMaterialWeight ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder={t('billing.enterWeightGrams')}
+                    />
+                    {exchangeFormErrors.oldMaterialWeight && (
+                      <p className="text-xs text-red-600">{exchangeFormErrors.oldMaterialWeight}</p>
+                    )}
+                  </div>
                 </div>
                 
                 <div>
@@ -2102,28 +2491,43 @@ const Billing: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('billing.oldMaterialRate')} *
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={exchangeMaterial.oldMaterialRate || ''}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                        if (!isNaN(value) && value >= 0) {
-                          setExchangeMaterial(prev => ({ ...prev, oldMaterialRate: value }));
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (e.target.value === '') {
-                          setExchangeMaterial(prev => ({ ...prev, oldMaterialRate: 0 }));
-                        }
-                      }}
-                      onWheel={handleWheel}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                      placeholder="0"
-                    />
-                    <span className="text-sm text-gray-600 font-medium">₹/g</span>
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={exchangeMaterial.oldMaterialRate || ''}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                          if (!isNaN(value) && value >= 0) {
+                            setExchangeMaterial(prev => ({ ...prev, oldMaterialRate: value }));
+                            if (exchangeFormErrors.oldMaterialRate) {
+                              setExchangeFormErrors(prev => ({ ...prev, oldMaterialRate: undefined }));
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            setExchangeMaterial(prev => ({ ...prev, oldMaterialRate: 0 }));
+                          } else {
+                            const value = parseInt(e.target.value);
+                            if (isNaN(value) || value <= 0) {
+                              setExchangeFormErrors(prev => ({ ...prev, oldMaterialRate: t('billing.rateRequired') }));
+                            }
+                          }
+                        }}
+                        onWheel={handleWheel}
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm ${
+                          exchangeFormErrors.oldMaterialRate ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="0"
+                      />
+                      <span className="text-sm text-gray-600 font-medium">₹/g</span>
+                    </div>
+                    {exchangeFormErrors.oldMaterialRate && (
+                      <p className="text-xs text-red-600">{exchangeFormErrors.oldMaterialRate}</p>
+                    )}
                   </div>
                 </div>
                 
@@ -2131,28 +2535,43 @@ const Billing: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('billing.exchangeRate')} *
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={exchangeMaterial.exchangeRate || ''}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                        if (!isNaN(value) && value >= 0) {
-                          setExchangeMaterial(prev => ({ ...prev, exchangeRate: value }));
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (e.target.value === '') {
-                          setExchangeMaterial(prev => ({ ...prev, exchangeRate: 0 }));
-                        }
-                      }}
-                      onWheel={handleWheel}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                      placeholder="0"
-                    />
-                    <span className="text-sm text-gray-600 font-medium">₹/g</span>
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={exchangeMaterial.exchangeRate || ''}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                          if (!isNaN(value) && value >= 0) {
+                            setExchangeMaterial(prev => ({ ...prev, exchangeRate: value }));
+                            if (exchangeFormErrors.exchangeRate) {
+                              setExchangeFormErrors(prev => ({ ...prev, exchangeRate: undefined }));
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            setExchangeMaterial(prev => ({ ...prev, exchangeRate: 0 }));
+                          } else {
+                            const value = parseInt(e.target.value);
+                            if (isNaN(value) || value <= 0) {
+                              setExchangeFormErrors(prev => ({ ...prev, exchangeRate: t('billing.rateRequired') }));
+                            }
+                          }
+                        }}
+                        onWheel={handleWheel}
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm ${
+                          exchangeFormErrors.exchangeRate ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="0"
+                      />
+                      <span className="text-sm text-gray-600 font-medium">₹/g</span>
+                    </div>
+                    {exchangeFormErrors.exchangeRate && (
+                      <p className="text-xs text-red-600">{exchangeFormErrors.exchangeRate}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2365,71 +2784,109 @@ const Billing: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center space-x-1.5">
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={item.weight || ''}
-                            onChange={(e) => {
-                              const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                              if (!isNaN(value) && value > 0) {
-                                if (activeTab === 'exchange') {
-                                  updateExchangeItem(item.id, { weight: value });
-                                } else {
-                                  updateBillItem(item.id, { weight: value });
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-1.5">
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={item.weight || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                if (!isNaN(value) && value > 0) {
+                                  if (activeTab === 'exchange') {
+                                    updateExchangeItem(item.id, { weight: value });
+                                  } else {
+                                    updateBillItem(item.id, { weight: value });
+                                  }
+                                  // Clear error on valid input
+                                  if (itemErrors[item.id]?.weight) {
+                                    setItemErrors(prev => ({
+                                      ...prev,
+                                      [item.id]: { ...prev[item.id], weight: undefined }
+                                    }));
+                                  }
                                 }
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (e.target.value === '' || parseFloat(e.target.value) <= 0) {
-                                const defaultValue = item.weight || 0.01;
-                                if (activeTab === 'exchange') {
-                                  updateExchangeItem(item.id, { weight: defaultValue });
-                                } else {
-                                  updateBillItem(item.id, { weight: defaultValue });
+                              }}
+                              onBlur={(e) => {
+                                const value = parseFloat(e.target.value);
+                                if (e.target.value === '' || isNaN(value) || value <= 0) {
+                                  const defaultValue = item.weight || 0.01;
+                                  if (activeTab === 'exchange') {
+                                    updateExchangeItem(item.id, { weight: defaultValue });
+                                  } else {
+                                    updateBillItem(item.id, { weight: defaultValue });
+                                  }
+                                  setItemErrors(prev => ({
+                                    ...prev,
+                                    [item.id]: { ...prev[item.id], weight: t('billing.weightRequired') }
+                                  }));
                                 }
-                              }
-                            }}
-                            onWheel={handleWheel}
-                            className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                            placeholder="0.00"
-                          />
-                          <span className="text-sm text-gray-600 font-medium whitespace-nowrap">g</span>
+                              }}
+                              onWheel={handleWheel}
+                              className={`w-20 px-2 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm ${
+                                itemErrors[item.id]?.weight ? 'border-red-500' : 'border-gray-300'
+                              }`}
+                              placeholder="0.00"
+                            />
+                            <span className="text-sm text-gray-600 font-medium whitespace-nowrap">g</span>
+                          </div>
+                          {itemErrors[item.id]?.weight && (
+                            <p className="text-xs text-red-600">{itemErrors[item.id].weight}</p>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center space-x-1.5">
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={item.rate || ''}
-                            onChange={(e) => {
-                              const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                              if (!isNaN(value) && value > 0) {
-                                if (activeTab === 'exchange') {
-                                  updateExchangeItem(item.id, { rate: value });
-                                } else {
-                                  updateBillItem(item.id, { rate: value });
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex items-center space-x-1.5">
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={item.rate || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                if (!isNaN(value) && value > 0) {
+                                  if (activeTab === 'exchange') {
+                                    updateExchangeItem(item.id, { rate: value });
+                                  } else {
+                                    updateBillItem(item.id, { rate: value });
+                                  }
+                                  // Clear error on valid input
+                                  if (itemErrors[item.id]?.rate) {
+                                    setItemErrors(prev => ({
+                                      ...prev,
+                                      [item.id]: { ...prev[item.id], rate: undefined }
+                                    }));
+                                  }
                                 }
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (e.target.value === '' || parseInt(e.target.value) <= 0) {
-                                if (activeTab === 'exchange') {
-                                  updateExchangeItem(item.id, { rate: 0 });
-                                } else {
-                                  updateBillItem(item.id, { rate: 0 });
+                              }}
+                              onBlur={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (e.target.value === '' || isNaN(value) || value <= 0) {
+                                  setItemErrors(prev => ({
+                                    ...prev,
+                                    [item.id]: { ...prev[item.id], rate: t('billing.rateRequired') }
+                                  }));
+                                  if (activeTab === 'exchange') {
+                                    updateExchangeItem(item.id, { rate: 0 });
+                                  } else {
+                                    updateBillItem(item.id, { rate: 0 });
+                                  }
                                 }
-                              }
-                            }}
-                            onWheel={handleWheel}
-                            className="w-24 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                            placeholder="0"
-                          />
-                          <span className="text-sm text-gray-500 font-semibold whitespace-nowrap">₹</span>
-                          <span className="text-sm text-gray-600 font-medium whitespace-nowrap">/g</span>
+                              }}
+                              onWheel={handleWheel}
+                              className={`w-24 px-2 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm ${
+                                itemErrors[item.id]?.rate ? 'border-red-500' : 'border-gray-300'
+                              }`}
+                              placeholder="0"
+                            />
+                            <span className="text-sm text-gray-500 font-semibold whitespace-nowrap">₹</span>
+                            <span className="text-sm text-gray-600 font-medium whitespace-nowrap">/g</span>
+                          </div>
+                          {itemErrors[item.id]?.rate && (
+                            <p className="text-xs text-red-600">{itemErrors[item.id].rate}</p>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
@@ -2499,7 +2956,7 @@ const Billing: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center justify-center">
+                        <div className="flex flex-col items-center space-y-1">
                           <input
                             type="number"
                             min="1"
@@ -2513,11 +2970,23 @@ const Billing: React.FC = () => {
                                 } else {
                                   updateBillItem(item.id, { quantity: value });
                                 }
+                                // Clear error on valid input
+                                if (itemErrors[item.id]?.quantity) {
+                                  setItemErrors(prev => ({
+                                    ...prev,
+                                    [item.id]: { ...prev[item.id], quantity: undefined }
+                                  }));
+                                }
                               }
                             }}
                             onBlur={(e) => {
-                              if (e.target.value === '' || parseInt(e.target.value) <= 0) {
+                              const value = parseInt(e.target.value);
+                              if (e.target.value === '' || isNaN(value) || value <= 0) {
                                 const defaultValue = item.quantity || 1;
+                                setItemErrors(prev => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], quantity: t('billing.quantityRequired') }
+                                }));
                                 if (activeTab === 'exchange') {
                                   updateExchangeItem(item.id, { quantity: defaultValue });
                                 } else {
@@ -2526,9 +2995,14 @@ const Billing: React.FC = () => {
                               }
                             }}
                             onWheel={handleWheel}
-                            className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-center"
+                            className={`w-16 px-2 py-1.5 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-center ${
+                              itemErrors[item.id]?.quantity ? 'border-red-500' : 'border-gray-300'
+                            }`}
                             placeholder="1"
                           />
+                          {itemErrors[item.id]?.quantity && (
+                            <p className="text-xs text-red-600 text-center">{itemErrors[item.id].quantity}</p>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
@@ -2658,28 +3132,45 @@ const Billing: React.FC = () => {
               
               <div className="flex justify-between items-center py-2 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-700">{t('billing.discount')}:</span>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={currentBill.discount_amount || ''}
-                    onChange={(e) => {
-                      const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                      if (!isNaN(value) && value >= 0) {
-                        setCurrentBill(prev => ({ ...prev, discount_amount: value }));
-                      }
-                    }}
-                    onBlur={(e) => {
-                      if (e.target.value === '') {
-                        setCurrentBill(prev => ({ ...prev, discount_amount: 0 }));
-                      }
-                    }}
-                    onWheel={handleWheel}
-                    className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                    placeholder="0"
-                  />
-                  <span className="text-sm text-gray-600 font-medium">₹</span>
+                <div className="flex flex-col items-end space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={currentBill.discount_amount || ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                        if (!isNaN(value) && value >= 0) {
+                          setCurrentBill(prev => ({ ...prev, discount_amount: value }));
+                          if (billFormErrors.discount_amount) {
+                            setBillFormErrors(prev => ({ ...prev, discount_amount: undefined }));
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          setCurrentBill(prev => ({ ...prev, discount_amount: 0 }));
+                        } else {
+                          const value = parseFloat(e.target.value);
+                          if (isNaN(value) || value < 0) {
+                            setBillFormErrors(prev => ({ ...prev, discount_amount: t('billing.discountAmountInvalid') }));
+                          } else if (value > (currentBill.subtotal || 0)) {
+                            setBillFormErrors(prev => ({ ...prev, discount_amount: t('billing.discountExceedsSubtotal') }));
+                          }
+                        }
+                      }}
+                      onWheel={handleWheel}
+                      className={`w-28 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm ${
+                        billFormErrors.discount_amount ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                    />
+                    <span className="text-sm text-gray-600 font-medium">₹</span>
+                  </div>
+                  {billFormErrors.discount_amount && (
+                    <p className="text-xs text-red-600">{billFormErrors.discount_amount}</p>
+                  )}
                 </div>
               </div>
               
@@ -2690,24 +3181,40 @@ const Billing: React.FC = () => {
               
               <div className="flex justify-between items-center py-2 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-700">{t('billing.gst')}:</span>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={Math.round(currentBill.tax_percentage || 3)}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      if (!isNaN(value) && value >= 0 && value <= 100) {
-                        setCurrentBill(prev => ({ ...prev, tax_percentage: value }));
-                      }
-                    }}
-                    onWheel={handleWheel}
-                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-center"
-                    placeholder="3"
-                  />
-                  <span className="text-sm text-gray-600 font-medium">%</span>
+                <div className="flex flex-col items-end space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={Math.round(currentBill.tax_percentage || 3)}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (!isNaN(value) && value >= 0 && value <= 100) {
+                          setCurrentBill(prev => ({ ...prev, tax_percentage: value }));
+                          if (billFormErrors.tax_percentage) {
+                            setBillFormErrors(prev => ({ ...prev, tax_percentage: undefined }));
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = parseInt(e.target.value);
+                        if (isNaN(value) || value < 0 || value > 100) {
+                          setBillFormErrors(prev => ({ ...prev, tax_percentage: t('billing.taxPercentageInvalid') }));
+                        }
+                      }}
+                      onWheel={handleWheel}
+                      className={`w-20 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-center ${
+                        billFormErrors.tax_percentage ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="3"
+                    />
+                    <span className="text-sm text-gray-600 font-medium">%</span>
+                  </div>
+                  {billFormErrors.tax_percentage && (
+                    <p className="text-xs text-red-600">{billFormErrors.tax_percentage}</p>
+                  )}
                 </div>
               </div>
               
@@ -2744,28 +3251,45 @@ const Billing: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('billing.amountPaid')}
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={currentBill.amount_paid || ''}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                        if (!isNaN(value) && value >= 0) {
-                          setCurrentBill(prev => ({ ...prev, amount_paid: value }));
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (e.target.value === '') {
-                          setCurrentBill(prev => ({ ...prev, amount_paid: 0 }));
-                        }
-                      }}
-                      onWheel={handleWheel}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                      placeholder="0"
-                    />
-                    <span className="text-sm text-gray-600 font-medium">₹</span>
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={currentBill.amount_paid || ''}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                          if (!isNaN(value) && value >= 0) {
+                            setCurrentBill(prev => ({ ...prev, amount_paid: value }));
+                            if (billFormErrors.amount_paid) {
+                              setBillFormErrors(prev => ({ ...prev, amount_paid: undefined }));
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            setCurrentBill(prev => ({ ...prev, amount_paid: 0 }));
+                          } else {
+                            const value = parseFloat(e.target.value);
+                            if (isNaN(value) || value < 0) {
+                              setBillFormErrors(prev => ({ ...prev, amount_paid: t('billing.amountPaidInvalid') }));
+                            } else if (value > (currentBill.total_amount || 0)) {
+                              setBillFormErrors(prev => ({ ...prev, amount_paid: t('billing.amountPaidExceedsTotal') }));
+                            }
+                          }
+                        }}
+                        onWheel={handleWheel}
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm ${
+                          billFormErrors.amount_paid ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="0"
+                      />
+                      <span className="text-sm text-gray-600 font-medium">₹</span>
+                    </div>
+                    {billFormErrors.amount_paid && (
+                      <p className="text-xs text-red-600">{billFormErrors.amount_paid}</p>
+                    )}
                   </div>
                 </div>
                 
@@ -3232,6 +3756,7 @@ const Billing: React.FC = () => {
         <CustomerModal
           onClose={() => setShowCustomerModal(false)}
           onSelect={setSelectedCustomer}
+          initialView={customerModalInitialView}
         />
       )}
     </div>

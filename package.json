@@ -1,7 +1,7 @@
 {
   "name": "gold-billing-system",
   "version": "1.0.0",
-  "description": "Offline Gold Billing System with SQLite backend and React frontend",
+  "description": "Vannamiyal Thangamaligai - Offline gold jewelry billing system with SQLite backend and React frontend",
   "private": true,
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

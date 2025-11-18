@@ -136,7 +136,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Left side - Logo */}
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-3">
-                <Crown className="h-8 w-8 text-white icon-glow floating" />
+                {/* Logo Image - Try multiple formats */}
+                <div className="relative h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center">
+                  <img 
+                    src="/logo.png" 
+                    alt="Vannamiyal Thangamaligai Logo" 
+                    className="h-full w-full object-contain drop-shadow-lg"
+                    onError={(e) => {
+                      // Try SVG if PNG fails
+                      const target = e.target as HTMLImageElement;
+                      if (target.src.endsWith('.png')) {
+                        target.src = '/logo.svg';
+                      } else if (target.src.endsWith('.svg')) {
+                        // If SVG also fails, hide image and show Crown icon
+                        target.style.display = 'none';
+                        const fallback = target.parentElement?.querySelector('.logo-fallback') as HTMLElement;
+                        if (fallback) fallback.style.display = 'block';
+                      }
+                    }}
+                  />
+                  {/* Fallback Crown icon */}
+                  <Crown 
+                    className="logo-fallback h-8 w-8 text-white icon-glow floating hidden absolute" 
+                    style={{ display: 'none' }}
+                  />
+                </div>
                 <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">{t('app.title')}</h1>
               </div>
             </div>
@@ -307,7 +331,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {sidebarOpen && (
               <div className="p-4 border-t border-amber-200/30">
                 <div className="text-xs text-amber-600 text-center font-medium">
-                  Gold Billing System v1.0
+                  Vannamiyal Thangamaligai v1.0
                 </div>
               </div>
             )}

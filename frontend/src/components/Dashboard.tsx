@@ -62,6 +62,10 @@ const Dashboard: React.FC = () => {
     startDate: '',
     endDate: '',
   });
+  const [dateRangeErrors, setDateRangeErrors] = useState<{
+    startDate?: string;
+    endDate?: string;
+  }>({});
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [filteredSalesData, setFilteredSalesData] = useState<Array<{ period: string; sales: number }>>([]);
@@ -140,10 +144,18 @@ const Dashboard: React.FC = () => {
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      
       const todaySales = allSales
         .filter((sale) => {
+          if (!sale.created_at) return false;
           const saleDate = new Date(sale.created_at);
-          return !isNaN(saleDate.getTime()) && saleDate >= todayStart;
+          if (isNaN(saleDate.getTime())) return false;
+          // Compare dates by day (ignore time) to handle timezone issues
+          const saleDateOnly = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
+          const todayDateOnly = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate());
+          return saleDateOnly.getTime() === todayDateOnly.getTime();
         })
         .reduce((sum, sale) => {
           const amount = parseFloat(sale.total_amount) || 0;
@@ -155,8 +167,10 @@ const Dashboard: React.FC = () => {
       thisMonthStart.setHours(0, 0, 0, 0);
       const thisMonthSales = allSales
         .filter((sale) => {
+          if (!sale.created_at) return false;
           const saleDate = new Date(sale.created_at);
-          return !isNaN(saleDate.getTime()) && saleDate >= thisMonthStart;
+          if (isNaN(saleDate.getTime())) return false;
+          return saleDate >= thisMonthStart;
         })
         .reduce((sum, sale) => {
           const amount = parseFloat(sale.total_amount) || 0;
@@ -330,8 +344,15 @@ const Dashboard: React.FC = () => {
       }
 
       allSales.forEach((sale) => {
+        if (!sale.created_at) return;
         const saleDate = new Date(sale.created_at);
-        if (saleDate >= todayStart && saleDate <= todayEnd) {
+        if (isNaN(saleDate.getTime())) return;
+        
+        // Compare dates by day (ignore time) to handle timezone issues
+        const saleDateOnly = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
+        const todayDateOnly = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate());
+        
+        if (saleDateOnly.getTime() === todayDateOnly.getTime()) {
           const hour = saleDate.getHours();
           const hourKey = `${hour}:00`;
           const amount = parseFloat(sale.total_amount) || 0;
@@ -1560,9 +1581,9 @@ const Dashboard: React.FC = () => {
                 <XCircle className="h-5 w-5" />
               </button>
             </div>
-              <p className="text-sm text-gray-500 mt-2">{t('dashboard.selectDateRangeDescription')}</p>
-            </div>
-            <div className="p-6 space-y-6">
+            <p className="text-sm text-gray-500 mt-2">{t('dashboard.selectDateRangeDescription')}</p>
+          </div>
+          <div className="p-6 space-y-6">
               {/* Quick Presets */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">{t('dashboard.quickPresets')}</label>
@@ -1614,28 +1635,70 @@ const Dashboard: React.FC = () => {
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('dashboard.startDate')}</label>
                     <div className="relative">
                       <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="date"
-                  value={customDateRange.startDate}
-                  onChange={(e) => setCustomDateRange((prev) => ({ ...prev, startDate: e.target.value }))}
+                      <input
+                        type="date"
+                        value={customDateRange.startDate}
+                        onChange={(e) => {
+                          setCustomDateRange((prev) => ({ ...prev, startDate: e.target.value }));
+                          if (dateRangeErrors.startDate) {
+                            setDateRangeErrors(prev => ({ ...prev, startDate: undefined }));
+                          }
+                          // Validate if end date exists
+                          if (customDateRange.endDate && e.target.value > customDateRange.endDate) {
+                            setDateRangeErrors(prev => ({ ...prev, startDate: t('dashboard.startDateAfterEndDate') }));
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value && customDateRange.endDate && e.target.value > customDateRange.endDate) {
+                            setDateRangeErrors(prev => ({ ...prev, startDate: t('dashboard.startDateAfterEndDate') }));
+                          } else if (e.target.value && new Date(e.target.value) > new Date()) {
+                            setDateRangeErrors(prev => ({ ...prev, startDate: t('dashboard.startDateFuture') }));
+                          }
+                        }}
                         max={customDateRange.endDate || new Date().toISOString().split('T')[0]}
-                        className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                />
+                        className={`w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm ${
+                          dateRangeErrors.startDate ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
                     </div>
+                    {dateRangeErrors.startDate && (
+                      <p className="mt-1 text-xs text-red-600">{dateRangeErrors.startDate}</p>
+                    )}
               </div>
               <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('dashboard.endDate')}</label>
                     <div className="relative">
                       <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="date"
-                  value={customDateRange.endDate}
-                  onChange={(e) => setCustomDateRange((prev) => ({ ...prev, endDate: e.target.value }))}
+                      <input
+                        type="date"
+                        value={customDateRange.endDate}
+                        onChange={(e) => {
+                          setCustomDateRange((prev) => ({ ...prev, endDate: e.target.value }));
+                          if (dateRangeErrors.endDate) {
+                            setDateRangeErrors(prev => ({ ...prev, endDate: undefined }));
+                          }
+                          // Validate if start date exists
+                          if (customDateRange.startDate && e.target.value < customDateRange.startDate) {
+                            setDateRangeErrors(prev => ({ ...prev, endDate: t('dashboard.endDateBeforeStartDate') }));
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value && customDateRange.startDate && e.target.value < customDateRange.startDate) {
+                            setDateRangeErrors(prev => ({ ...prev, endDate: t('dashboard.endDateBeforeStartDate') }));
+                          } else if (e.target.value && new Date(e.target.value) > new Date()) {
+                            setDateRangeErrors(prev => ({ ...prev, endDate: t('dashboard.endDateFuture') }));
+                          }
+                        }}
                         min={customDateRange.startDate}
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
-                />
-              </div>
+                        className={`w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm ${
+                          dateRangeErrors.endDate ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                    </div>
+                    {dateRangeErrors.endDate && (
+                      <p className="mt-1 text-xs text-red-600">{dateRangeErrors.endDate}</p>
+                    )}
                   </div>
                 </div>
                 {customDateRange.startDate && customDateRange.endDate && (

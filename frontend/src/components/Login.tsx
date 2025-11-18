@@ -45,7 +45,7 @@ const Login: React.FC = () => {
               <Crown className="h-16 w-16 text-amber-600 icon-glow floating" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Gold Billing System</h1>
+          <h1 className="text-3xl font-bold gradient-text mb-2">Vannamiyal Thangamaligai</h1>
           <p className="text-gray-600">Sign in to your account</p>
         </div>
 
@@ -150,7 +150,7 @@ const Login: React.FC = () => {
 
         {/* Footer */}
         <p className="text-center mt-6 text-sm text-gray-600">
-          Gold Billing System v1.0
+          Vannamiyal Thangamaligai v1.0
         </p>
       </div>
     </div>

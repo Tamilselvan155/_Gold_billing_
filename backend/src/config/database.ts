@@ -16,7 +16,7 @@ export const config = {
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173'
   },
   app: {
-    name: process.env.APP_NAME || 'Gold Billing System',
+    name: process.env.APP_NAME || 'Vannamiyal Thangamaligai',
     version: process.env.APP_VERSION || '1.0.0'
   }
 };

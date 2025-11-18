@@ -1,7 +1,7 @@
 {
   "name": "gold-billing-backend",
   "version": "1.0.0",
-  "description": "Backend API for Gold Billing System with SQLite",
+  "description": "Backend API for Vannamiyal Thangamaligai with SQLite",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {

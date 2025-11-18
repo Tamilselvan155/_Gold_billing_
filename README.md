@@ -1,4 +1,4 @@
-# Gold Billing System
+# Vannamiyal Thangamaligai
 
 An offline-capable gold jewelry billing system built with React frontend and Node.js backend using SQLite database.
 
